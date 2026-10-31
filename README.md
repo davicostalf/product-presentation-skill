@@ -1,13 +1,35 @@
 # product-presentation-skill
 
-Skill do Claude para produzir vídeos de demonstração narrados de protótipos web: roteiro, storyboard, teleprompter, gravação da narração, tratamento do áudio, captura de desktop e celular, montagem e verificação.
+An [Agent Skill](https://agentskills.io) for planning and producing presentations of a product or prototype: script, slides, storyboard, and delivery, including narrated demo videos with desktop and phone screen recordings and a voice-over recorded by the presenter.
 
-## Instalação
+## What's inside
 
-Copie a pasta `skills/video-demo-narrado` para `.claude/skills/` do seu projeto (ou para `~/.claude/skills/`, para usar em todos os projetos).
+```
+skills/product-presentation/
+├── SKILL.md                         # workflow, script rules, storyboard, sync, working mode
+└── references/
+    ├── presentation-types.md        # sequences and rules per presentation type
+    └── recorded-delivery.md         # narration, audio, capture, assembly, verification
+```
 
-## Conteúdo
+## Install
 
-- `skills/video-demo-narrado/SKILL.md`: o processo, as regras por etapa e os tipos de vídeo.
-- `IDEAS.md`: propostas em avaliação.
-- `CHANGELOG.md`: histórico de versões.
+**Claude Code**
+
+```
+/plugin marketplace add davicostalf/product-presentation-skill
+/plugin install product-presentation@product-presentation-skill
+```
+
+**Other agents that support Agent Skills**
+
+Copy `skills/product-presentation/` into the skills directory your agent reads (for Claude Code without the plugin: `.claude/skills/` in a project or `~/.claude/skills/` for every project).
+
+## Also in this repo
+
+- [IDEAS.md](IDEAS.md): proposals under consideration.
+- [CHANGELOG.md](CHANGELOG.md): version history.
+
+## License
+
+[MIT](LICENSE)

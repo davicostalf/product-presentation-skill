@@ -1,38 +1,40 @@
-# Ideias
+# Ideas
 
-Propostas em avaliação. Nada aqui é compromisso: uma ideia aprovada vira mudança na skill e entra no CHANGELOG.
+Proposals under consideration. Nothing here is a commitment: an approved idea becomes a change to the skill and an entry in the changelog.
 
-## Estrutura
+## Structure
 
-- **Apresentação de produto como centro, gravação como modo de entrega.** Reorganizar em: apresentação (tipos, roteiro, slides, demo do protótipo), ensaio (storyboard) e entrega, ao vivo ou gravada. O modo ao vivo cobriria notas do apresentador, ordem das telas e o protótipo preparado em cada estado.
-- **Nome: `product-presentation`** para a skill, combinando com o repositório `product-presentation-skill`. "Product" delimita o assunto; "presentation" cobre apresentação conceitual, demo ao vivo, vídeo gravado e vídeo de landing page.
+- **Product presentation at the center, recording as a delivery mode.** Organize as presentation (types, script, slides, prototype demo), rehearsal (storyboard) and delivery, live or recorded. The live mode would cover presenter notes, screen order and the prototype prepared in each state.
 
-## Tipos novos
+## New types
 
-- **Apresentação conceitual de fluxo ou jornada.** Sem protótipo funcionando: o fluxo ou a jornada contados em etapas, com diagramas ou telas estáticas.
-- **Vídeo de landing page.** 30 a 90 segundos, sem apresentador nem destinatário; abre pelo benefício, legendas para assistir sem som, chamada final; geralmente sem slides de contexto.
+- **Conceptual flow or journey presentation.** No working prototype: the flow or journey told in steps, with diagrams or static screens.
+- **Landing page video.** 30–90 seconds, no presenter or recipient; opens with the benefit, captions for watching without sound, a closing call to action; usually no context slides.
 
-## Antes do roteiro
+## Before the script
 
-- **Entrevista inicial.** Levantar objetivo, público, pontos-chave e dados antes de escolher o tipo e escrever. Fonte: artigo do freeCodeCamp sobre Claude Code + Marp.
-- **3 ou 4 mensagens-chave.** Definir o que o público deve lembrar, testar o roteiro contra elas e repeti-las no fechamento. Fonte: guia de Demo Day da YC; Duarte (Resonate).
+- **Initial interview.** Gather goal, audience, key points and data before picking the type and writing. Source: freeCodeCamp article on Claude Code + Marp.
+- **3–4 key messages.** Define what the audience should remember, test the script against them and repeat them in the closing. Sources: Y Combinator Demo Day guide; Duarte (Resonate).
 
-## Roteiro
+## Script
 
-- **Orçamento de palavras por trecho.** Com ~120 palavras por minuto, calcular quanto cabe em cada bloco e checar o roteiro contra a duração-alvo do tipo. Fonte: `catalan-adobe/skills` (demo-narrate).
-- **Cobertura derivada das mudanças.** Quando a demo mostra uma rodada de mudanças, listar o que mudou (diff ou changelog do produto) e garantir que cada item aparece no roteiro. Fonte: `jaobrown/demo-changes`.
+- **Word budget per segment.** At ~120 words per minute, compute how much fits in each block and check the script against the type's target length. Source: `catalan-adobe/skills` (demo-narrate).
+- **Coverage derived from changes.** When the demo shows a round of changes, list what changed (diff or product changelog) and make sure each item appears in the script. Source: `jaobrown/demo-changes`.
 
 ## Slides
 
-- **Verificação em camadas.** Texto provisório esquecido (lorem, TODO), arquivo válido e inspeção visual de cada slide, com uma lista de antipadrões de design (linha decorativa sob o título, texto centralizado, layouts idênticos repetidos, texto estourando). Fonte: skill `pptx` da Anthropic.
+- **Layered verification.** Leftover placeholder text (lorem, TODO), a valid file, and visual inspection of every slide, with a list of design anti-patterns (decorative line under the title, centered text, repeated identical layouts, overflowing text). Source: Anthropic's `pptx` skill.
 
-## Gravação e montagem
+## Recording and assembly
 
-- **Ensaio da captura sem áudio.** Rodar a captura inteira antes da montagem final para validar ações e tempos. Fonte: `tomek-i/narrate-plugin`.
-- **Troca de áudio sem recaptura.** Explicitar que regravar uma frase substitui só a faixa de áudio de um vídeo já montado. Fonte: `Avatechdir/video-walkthrough-skill`.
-- **Capturas limpas dos estados-chave.** Exportar quadros sem cursor nem legenda, para documentação e slides. Fonte: `Avatechdir/video-walkthrough-skill`.
+- **Silent dry run of the capture.** Run the whole capture before the final assembly to validate actions and timings. Source: `tomek-i/narrate-plugin`.
+- **Clean captures of key states.** Export frames without pointer or captions, for documentation and slides. Source: `Avatechdir/video-walkthrough-skill`.
 
-## Benchmark pendente
+## Skill quality
 
-- Ler os SKILL.md completos de `presentation-builder`, `web-video-presentation`, `ted-talk`, `demo-narrate` e `narrate-plugin`.
-- Olhar ferramentas comerciais de demo (Arcade, Supademo, Tella, Descript) e equivalentes em outros agentes (Cursor, Codex).
+- **Evaluations.** At least three test scenarios run with the models the skill targets, before expanding the instructions.
+
+## Pending benchmark
+
+- Read the full SKILL.md of `presentation-builder`, `web-video-presentation`, `ted-talk`, `demo-narrate` and `narrate-plugin`.
+- Look at commercial demo tools (Arcade, Supademo, Tella, Descript) and equivalents in other agents (Cursor, Codex).

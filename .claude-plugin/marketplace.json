@@ -1,0 +1,19 @@
+{
+  "name": "product-presentation-skill",
+  "owner": {
+    "name": "Davi Costa"
+  },
+  "metadata": {
+    "description": "Agent Skill for planning and producing product presentations and narrated demo videos",
+    "version": "0.2.0"
+  },
+  "plugins": [
+    {
+      "name": "product-presentation",
+      "description": "Plans and produces product presentations, from the script to a narrated demo video",
+      "source": "./",
+      "strict": false,
+      "skills": ["./skills/product-presentation"]
+    }
+  ]
+}
