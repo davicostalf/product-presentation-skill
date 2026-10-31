@@ -4,7 +4,13 @@ Propostas em avaliação. Nada aqui é compromisso: uma ideia aprovada vira muda
 
 ## Estrutura
 
-- **Apresentação como centro, gravação como modo de entrega.** Reorganizar em: apresentação (tipos, roteiro, slides, demo do protótipo), ensaio (storyboard) e entrega, ao vivo ou gravada. O modo ao vivo cobriria notas do apresentador, ordem das telas e o protótipo preparado em cada estado. Renomear a skill para combinar com o repositório.
+- **Apresentação de produto como centro, gravação como modo de entrega.** Reorganizar em: apresentação (tipos, roteiro, slides, demo do protótipo), ensaio (storyboard) e entrega, ao vivo ou gravada. O modo ao vivo cobriria notas do apresentador, ordem das telas e o protótipo preparado em cada estado.
+- **Nome: `product-presentation`** para a skill, combinando com o repositório `product-presentation-skill`. "Product" delimita o assunto; "presentation" cobre apresentação conceitual, demo ao vivo, vídeo gravado e vídeo de landing page.
+
+## Tipos novos
+
+- **Apresentação conceitual de fluxo ou jornada.** Sem protótipo funcionando: o fluxo ou a jornada contados em etapas, com diagramas ou telas estáticas.
+- **Vídeo de landing page.** 30 a 90 segundos, sem apresentador nem destinatário; abre pelo benefício, legendas para assistir sem som, chamada final; geralmente sem slides de contexto.
 
 ## Antes do roteiro
 

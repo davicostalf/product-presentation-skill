@@ -1,4 +1,4 @@
-# presentation-skill
+# product-presentation-skill
 
 Skill do Claude para produzir vídeos de demonstração narrados de protótipos web: roteiro, storyboard, teleprompter, gravação da narração, tratamento do áudio, captura de desktop e celular, montagem e verificação.
 
