@@ -9,3 +9,5 @@ Copie a pasta `skills/video-demo-narrado` para `.claude/skills/` do seu projeto 
 ## Conteúdo
 
 - `skills/video-demo-narrado/SKILL.md`: o processo, as regras por etapa e os tipos de vídeo.
+- `IDEAS.md`: propostas em avaliação.
+- `CHANGELOG.md`: histórico de versões.
