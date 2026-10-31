@@ -2,6 +2,12 @@
 
 Notable changes to the skill. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- GitHub Action that validates every skill against the Agent Skills specification on each push and pull request.
+
 ## [0.2.0] - 2026-10-31
 
 ### Changed
