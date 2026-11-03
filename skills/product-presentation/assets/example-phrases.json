@@ -1,0 +1,6 @@
+[
+  {"key": "type",    "phrase": "she types what she needs"},
+  {"key": "send",    "phrase": "in the search field", "end": true},
+  {"key": "results", "phrase": "the list comes back"},
+  {"key": "scroll",  "phrase": "then she scrolls"}
+]

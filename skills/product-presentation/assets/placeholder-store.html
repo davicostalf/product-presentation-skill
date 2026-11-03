@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Placeholder store</title>
+<!--
+  Neutral placeholder page used to test the capture scripts and to render
+  assets/reference-frame.png. No brand, no real product. Behavior: type in the search
+  field and press Search (or Enter) -> loading skeleton for ~1.2 s -> results with a
+  question row, then the page scrolls. Replace it with the real prototype for real work.
+-->
+<style>
+  :root { --bg:#fff; --ink:#2b2f36; --mute:#8a909a; --block:#dfe2e7; --block2:#eceef1; --line:#e4e6ea; --accent:#3b6cf0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { display: flex; align-items: center; gap: 20px; padding: 16px 28px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--bg); z-index: 5; }
+  .logo { width: 112px; height: 28px; border-radius: 6px; background: var(--ink); flex: none; }
+  form { flex: 1; display: flex; gap: 10px; max-width: 640px; }
+  input[type=search] { flex: 1; min-width: 0; height: 42px; padding: 0 14px; border: 1.5px solid #cfd3da; border-radius: 10px; font: inherit; outline: none; }
+  input[type=search]:focus { border-color: var(--accent); }
+  button.go { height: 42px; padding: 0 20px; border: 0; border-radius: 10px; background: var(--accent); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+  nav { display: flex; gap: 8px; margin-left: auto; }
+  nav span { width: 56px; height: 12px; border-radius: 6px; background: var(--block); }
+  main { padding: 24px 28px 80px; }
+  h2 { margin: 0 0 14px; font-size: 18px; }
+  .banner { height: 150px; border-radius: 14px; background: var(--block2); margin-bottom: 26px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
+  .chip { padding: 7px 14px; border: 1.5px solid var(--line); border-radius: 999px; background: #fff; font: inherit; font-size: 14px; cursor: pointer; }
+  .chip:hover { border-color: #b9bfc9; }
+  .question { margin: 0 0 6px; color: var(--mute); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 18px; }
+  .card { border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: #fff; }
+  .thumb { aspect-ratio: 1 / 1; border-radius: 8px; background: var(--block); margin-bottom: 12px; }
+  .line { height: 11px; border-radius: 6px; background: var(--block2); margin-bottom: 8px; }
+  .line.w60 { width: 60%; } .line.w80 { width: 80%; } .line.price { width: 34%; background: var(--block); height: 13px; }
+  .skeleton .thumb, .skeleton .line { background: linear-gradient(90deg, var(--block2) 25%, #f7f8fa 50%, var(--block2) 75%); background-size: 200% 100%; animation: sh 1.1s linear infinite; }
+  @keyframes sh { to { background-position: -200% 0; } }
+  #results { opacity: 0; transform: translateY(10px); transition: opacity .45s ease, transform .45s ease; }
+  #results.in { opacity: 1; transform: none; }
+  [hidden] { display: none !important; }
+  @media (max-width: 640px) {
+    header { padding: 12px 14px; flex-wrap: wrap; gap: 10px; } nav { display: none; } .logo { width: 84px; height: 22px; }
+    form { flex-basis: 100%; max-width: none; } main { padding: 16px 14px 60px; }
+    .grid { grid-template-columns: repeat(2, 1fr); gap: 12px; } .banner { height: 110px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"></div>
+  <form id="f" autocomplete="off">
+    <input type="search" id="q" placeholder="Search products" aria-label="Search products">
+    <button class="go" type="submit">Search</button>
+  </form>
+  <nav><span></span><span></span><span></span></nav>
+</header>
+<main>
+  <section id="home">
+    <div class="banner"></div>
+    <h2>Popular right now</h2>
+    <div class="grid" id="homegrid"></div>
+  </section>
+  <section id="loading" hidden>
+    <h2>Searching…</h2>
+    <div class="grid skeleton" id="skgrid"></div>
+  </section>
+  <section id="results" hidden>
+    <p class="question" id="qtext"></p>
+    <div class="chips">
+      <button class="chip" type="button">Option A</button>
+      <button class="chip" type="button">Option B</button>
+      <button class="chip" type="button">Option C</button>
+    </div>
+    <h2 id="rtitle"></h2>
+    <div class="grid" id="resgrid"></div>
+  </section>
+</main>
+<script>
+  const card = () => '<div class="card"><div class="thumb"></div><div class="line w80"></div><div class="line w60"></div><div class="line price"></div></div>';
+  const fill = (id, n) => { document.getElementById(id).innerHTML = Array.from({ length: n }, card).join(''); };
+  fill('homegrid', 8); fill('skgrid', 8); fill('resgrid', 12);
+  const $ = (id) => document.getElementById(id);
+  $('f').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const q = $('q').value.trim() || 'products';
+    $('home').hidden = true; $('results').hidden = true; $('results').classList.remove('in'); $('loading').hidden = false;
+    window.scrollTo(0, 0);
+    setTimeout(() => {
+      $('loading').hidden = true; $('results').hidden = false;
+      $('qtext').textContent = 'Which one fits best for “' + q + '”?';
+      $('rtitle').textContent = 'Results for “' + q + '”';
+      requestAnimationFrame(() => requestAnimationFrame(() => $('results').classList.add('in')));
+    }, 1200);
+  });
+</script>
+</body>
+</html>

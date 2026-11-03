@@ -8,10 +8,26 @@ An [Agent Skill](https://agentskills.io) for planning and producing presentation
 
 ```
 skills/product-presentation/
-├── SKILL.md                         # workflow, script rules, storyboard, sync, working mode
-└── references/
-    ├── presentation-types.md        # sequences and rules per presentation type
-    └── recorded-delivery.md         # narration, audio, capture, assembly, verification
+├── SKILL.md                         # workflow, script rules, storyboard, sync, capture rules, common mistakes
+├── references/
+│   ├── presentation-types.md        # sequences and rules per presentation type
+│   └── recorded-delivery.md         # narration, audio, capture, assembly, verification
+├── scripts/
+│   ├── check_env.sh                 # is real capture possible here?
+│   ├── cursor.js                    # injected pointer (arrow / touch dot) + glide, click, type, scroll
+│   ├── record.mjs                   # one scenario -> video (Xvfb + Chromium + ffmpeg)
+│   ├── run_pair.sh                  # desktop and phone in parallel
+│   ├── compose.py                   # desktop + phone side by side on the flat background
+│   ├── scenario-example.mjs         # cue-driven example scenario
+│   ├── scenario-slide-example.mjs   # live slide recording
+│   ├── transcribe.py                # word timestamps
+│   ├── cues.py                      # phrases -> cue list
+│   ├── treat_audio.sh               # light voice treatment
+│   └── cut_audio.py                 # cuts at energy minima
+└── assets/
+    ├── reference-frame.png          # target composition (1920x1080)
+    ├── placeholder-store.html       # neutral page to test the scripts
+    └── example-*.json               # example words, phrases and cues
 ```
 
 ## Install

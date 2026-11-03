@@ -5,7 +5,7 @@
   },
   "metadata": {
     "description": "Agent Skill for planning and producing product presentations and narrated demo videos",
-    "version": "0.2.0"
+    "version": "0.3.0"
   },
   "plugins": [
     {

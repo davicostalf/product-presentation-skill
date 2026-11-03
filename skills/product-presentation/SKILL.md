@@ -1,9 +1,9 @@
 ---
 name: product-presentation
-description: Plans and produces presentations of a product or prototype, from the script to the final delivery, including narrated demo videos that combine slides, desktop and phone screen recordings, and a voice-over recorded by the presenter. Use when asked to create, review, or re-cut a product presentation or demo video, write a presentation script, build a storyboard, generate a teleprompter, or treat and sync a recorded narration with prototype screens.
+description: Plans and produces presentations of a product or prototype, from the script to the final delivery, including narrated demo videos that combine slides, continuous desktop and phone screen video of the live prototype, and a voice-over recorded by the presenter. Use when asked to create, review, or re-cut a product presentation or demo video, write a presentation script, build a storyboard, generate a teleprompter, or treat and sync a recorded narration with prototype screens.
 license: MIT
 metadata:
-  version: "0.2.0"
+  version: "0.3.0"
 ---
 
 # Product presentation
@@ -34,7 +34,7 @@ Each artifact has a single source; the others derive from it.
 2. Write the **script** in the type's format, following the script rules below.
 3. Prepare **slides** and the **prototype** for each line.
 4. Build the **storyboard** and iterate until approved.
-5. For a recorded delivery, follow [references/recorded-delivery.md](references/recorded-delivery.md): record the narration, treat and cut the audio, capture and assemble, verify, export.
+5. For a recorded delivery, follow [references/recorded-delivery.md](references/recorded-delivery.md): record the narration, treat and cut the audio, capture and assemble, verify, export. Capture the prototype with the scripts in `scripts/` and obey [Prototype capture rules](#prototype-capture-rules).
 
 Iterate on the storyboard, not on the video: changing text, screens or order there costs minutes. Record the narration only after the storyboard is approved, so a script change never forces a re-recording.
 
@@ -80,6 +80,50 @@ These apply to the storyboard and to any recorded or rehearsed delivery.
   - paths go around such elements;
   - on the phone, a touch dot.
 - No conspicuous focus ring, tooltip or hover state that is not part of the narration.
+
+## Prototype capture rules
+
+Non-negotiable for every video that shows a prototype. Use the scripts; do not improvise a capture pipeline.
+
+1. **Continuous video of the real interaction.** The prototype segments are screen video of the live prototype running: typing, clicks, scrolls, page transitions, loading states, all happening in real time. Never build them from screenshots or storyboard frames, and never as a slideshow or pan-and-zoom over stills. The storyboard's still frames are for review only.
+2. **A visible pointer, injected into the page.** Scripted and headless browsers draw no cursor, and the screen grabber is run without one, so the pointer must be part of the page: `scripts/cursor.js` injects a small arrow on desktop and a translucent touch dot on the phone. It glides on eased curves (never jumps) and plays a press animation on every click. Point near a target, never resting on an element with a hover action.
+3. **Fixed composition.** Flat light background (`#F2F3F5` by default). The desktop window and the phone frame sit side by side, vertically centered, filling most of the frame with even margins. The phone has a rounded device frame. **No** extra container, card, border or drop shadow around the screens, and no device mockup beyond the phone frame. Exact proportions:
+
+   | Frame | Desktop window | Phone screen |
+   |---|---|---|
+   | 1920x1080 | 1336x835 at (50, 122) | 415x900 at (1441, 90) |
+   | 2560x1440 | 1781x1113 at (67, 163) | 553x1200 at (1921, 120) |
+
+   `scripts/compose.py` produces exactly this. The target look is [assets/reference-frame.png](assets/reference-frame.png), rendered from a neutral placeholder page: match it.
+4. **Stop if the environment cannot capture.** Run `scripts/check_env.sh` first. If a virtual display (Xvfb), Chromium with Playwright or ffmpeg is missing, stop and tell the user exactly what is missing and how to install it. Never fall back to stills silently, and never deliver a slideshow as if it were a demo.
+5. **Words never come before the screen** and the prototype never acts while an attachment preview is up (see Sync and pacing).
+
+| Script | Does |
+|---|---|
+| `scripts/check_env.sh` | verifies Xvfb, ffmpeg, Node, Playwright, Chromium, Pillow; lists what is missing |
+| `scripts/cursor.js` | injectable pointer overlay (arrow or touch dot) and a Node API: glide, click, type, scroll |
+| `scripts/record.mjs` | records one scenario on Xvfb + headed Chromium + ffmpeg (`--mode desktop` or `phone`) |
+| `scripts/run_pair.sh` | records desktop and phone in parallel on the same clock |
+| `scripts/compose.py` | cuts both clips at time zero and composes them on the flat background at 1080p or 1440p |
+| `scripts/scenario-example.mjs` | cue-driven example scenario: open, glide, type, click, wait for load, scroll |
+| `scripts/scenario-slide-example.mjs` | records an animated slide live |
+| `scripts/transcribe.py` | word timestamps of the narration (faster-whisper) |
+| `scripts/cues.py` | turns word timestamps and named phrases into the cue list that drives a scenario |
+| `scripts/treat_audio.sh` | light voice treatment and loudness normalization |
+| `scripts/cut_audio.py` | cuts at energy minima with short fades; remaps timings |
+
+`assets/placeholder-store.html` is a neutral page to try the scripts on before touching the real prototype.
+
+## Common mistakes
+
+- **Stills instead of video:** screenshots strung together, with no transitions or loading states. Record the live interaction.
+- **No cursor:** the pointer was never injected. Use `scripts/cursor.js`.
+- **Decorative frames:** a big box, card, border or drop shadow around the screens, or a device mockup. Flat background only.
+- **Cursor jumping:** teleporting between targets instead of gliding, or no press animation on clicks.
+- **Resting on hover targets:** the pointer parked on an element that reveals actions.
+- **Acting while the attachment preview is up:** the prototype must wait until it leaves.
+- **Words before the screen:** the sentence names something that is not visible yet.
+- **Silent fallback:** capture tooling missing and the video built from stills anyway. Stop and report instead.
 
 ## Working mode
 
