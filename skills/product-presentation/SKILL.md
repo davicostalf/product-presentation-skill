@@ -78,7 +78,8 @@ These apply to the storyboard and to any recorded or rehearsed delivery.
   - glides, never jumps;
   - to point at something, rests near it, never on top of an element with a hover action;
   - paths go around such elements;
-  - on the phone, a touch dot.
+  - on the phone, a touch dot;
+  - rests fully inside the screen, clear of the edges (pointer radius plus 8 px), the rounded corners and the safe areas.
 - No conspicuous focus ring, tooltip or hover state that is not part of the narration.
 
 ## Prototype capture rules

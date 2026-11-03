@@ -65,7 +65,8 @@ export async function run({ app, pointer, cues, mode, device, at, mark, sleep })
   await app.locator('#results.in').waitFor({ timeout: 15000 });
   mark('results-visible');
   // Rest in a quiet spot, not on a card. Phone coordinates are host-page px: offset by the iframe rect.
-  if (mode === 'phone') await pointer.park(device.x + device.w - 24, device.y + 330, 600);
+  // park() keeps the pointer fully inside the screen (clear of edges, corners and safe areas).
+  if (mode === 'phone') await pointer.park(device.x + 340, device.y + 262, 600);
   else await pointer.park(900, 330, 600);
 
   // 5. Scroll the results with an eased wheel, on the cue.

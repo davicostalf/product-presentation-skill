@@ -273,7 +273,14 @@ try {
   // Phone: the host page has no pointer of its own; the dot is drawn inside the prototype's iframe.
   if (useCursor) await cursor.install(ctx, { mode: phone ? 'phone' : 'desktop', clean: !opt['keep-ui'], where: phone ? 'frames' : 'top' });
   if (phone) await page.goto(pathToFileURL(hostFile).href);
-  const pointer = await cursor.attach(page, { mode: phone ? 'phone' : 'desktop' });
+  // Resting area of the pointer: on the phone, inside the screen with dot radius (18) + 8 px of margin
+  // from every edge, the rounded corners (radius + margin) and the top/bottom safe-area bands.
+  const pm = 26;
+  const bounds = phone ? {
+    left: dev.x + pm, right: dev.x + dev.w - pm,
+    top: dev.y + Math.max(safe.top, safe.radius) + pm, bottom: dev.y + dev.h - Math.max(safe.bottom, 0) - pm,
+  } : null;
+  const pointer = await cursor.attach(page, { mode: phone ? 'phone' : 'desktop', bounds });
   const appFrame = () => (phone ? page.frame({ name: 'device' }) : page.mainFrame());
   if (phone) {
     // A navigation inside the iframe creates a fresh overlay off-screen: re-emit the pointer position.

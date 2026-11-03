@@ -146,8 +146,16 @@ const ease = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
  * large distance directly, the pointer would jump.
  */
 async function attach(page, options) {
-  const o = Object.assign({ mode: 'desktop', x: null, y: null, speed: 0.9 }, options);
+  const o = Object.assign({ mode: 'desktop', x: null, y: null, speed: 0.9, bounds: null }, options);
   const vp = (await page.evaluate(() => [innerWidth, innerHeight]).catch(() => [1280, 720]));
+  // Resting area: park() and pointTo({ near }) are clamped into it so the pointer never rests
+  // half outside the screen. Default: the viewport inset by the pointer's radius + 8 px.
+  // `bounds` is { left, top, right, bottom } in viewport CSS px (record.mjs also keeps the phone
+  // dot out of the rounded corners and the safe-area bands). Clicks are NOT clamped: they go
+  // exactly where the target is.
+  const m = (o.mode === 'phone' ? 18 : 12) + 8;
+  const B = o.bounds || { left: m, top: m, right: vp[0] - m, bottom: vp[1] - m };
+  const clampTo = (x, y) => [Math.min(B.right, Math.max(B.left, x)), Math.min(B.bottom, Math.max(B.top, y))];
   const s = { x: o.x ?? vp[0] / 2, y: o.y ?? vp[1] / 2 };
   await page.mouse.move(s.x, s.y);
   // A navigation creates a fresh document whose overlay starts off-screen; re-emit the
@@ -186,7 +194,9 @@ async function attach(page, options) {
       if (!b) throw new Error('pointer.pointTo: target has no bounding box (hidden or detached)');
       // near > 0 rests this many px BELOW the box instead of on it (to point without hovering)
       const y = near ? b.y + b.height + near : b.y + b.height * fy + (Math.random() * 4 - 2);
-      await pointer.move(b.x + b.width * fx + (Math.random() * 4 - 2), y, ms);
+      const x = b.x + b.width * fx + (Math.random() * 4 - 2);
+      const [cx, cy] = near ? clampTo(x, y) : [x, y];
+      await pointer.move(cx, cy, ms);
       return b;
     },
 
@@ -247,7 +257,7 @@ async function attach(page, options) {
     },
 
     /** Move the pointer out of the way (a quiet spot) without clicking. */
-    park(x, y, ms = 450) { return pointer.move(x, y, ms); },
+    park(x, y, ms = 450) { const [cx, cy] = clampTo(x, y); return pointer.move(cx, cy, ms); },
   };
   return pointer;
 }

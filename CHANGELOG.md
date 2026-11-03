@@ -9,6 +9,7 @@ Notable changes to the skill. Format based on [Keep a Changelog](https://keepach
 - Phone capture is a 390x844 iframe host: `record.mjs --mode phone` embeds the prototype in an iframe of 390x844 CSS px (configurable with `--device`), centered on a flat background in a window of at least 500 px, and records exactly the iframe rect. The prototype now lays out at a real phone width instead of the 500 px Chromium minimum that was downscaled. The touch dot is injected into the iframe (`cursor.js` option `where: 'frames'`).
 - Scenario contract: `ctx.open(url)` opens the prototype and `ctx.app` (the page on desktop, a frame locator on the phone) locates elements; `scenario-example.mjs` and the docs are updated. `ctx.device` gives the iframe rect.
 - `compose.py` phone slot is 416x900 at (1440, 90) at 1080p and 555x1200 at (1920, 120) at 1440p (the 390:844 aspect), scaled whole without cropping; corner radius 47 (63) px.
+- `cursor.js`: `park()` and `pointTo({ near })` clamp the resting position inside the screen (pointer radius + 8 px margin; on the phone also clear of the rounded corners and safe-area bands), so the pointer never rests half outside the screen. Clicks are not clamped.
 - `assets/reference-frame.png` regenerated from the new capture.
 
 ### Added
