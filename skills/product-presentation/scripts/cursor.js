@@ -22,6 +22,11 @@
 //   desktop  small black arrow with white outline, 24 px, scales down on press.
 //   phone    translucent touch dot, 36 px, shrinks on press, soft ripple on tap.
 //
+// Where (option `where`): 'top' (default) draws in the top document only; 'frames' draws in
+// every iframe but not in the top document (record.mjs uses it for the phone, whose prototype
+// runs in an iframe inside a host page: the dot then lives in the prototype's own document and
+// is clipped at the screen edge, like a real touch); 'all' draws in both.
+//
 // Rules this implements (see SKILL.md): the pointer glides on an eased curve and
 // never jumps; every click has a press animation; pointTo() rests near a target,
 // not on top of it, when `near` is set, so hover-only controls do not appear.
@@ -36,8 +41,8 @@ function overlay(opts) {
   window.__pointerInit = true;
   const mode = opts.mode;
   const clean = opts.clean;
-  const topOnly = opts.where !== 'all';
-  if (topOnly && window.self !== window.top) return;
+  const isTop = window.self === window.top;
+  if (opts.where === 'frames' ? isTop : (opts.where !== 'all' && !isTop)) return;   // top | frames | all
 
   const start = () => {
     const root = document.documentElement;

@@ -23,8 +23,17 @@
 //   --mode MODE       desktop | phone (default desktop)
 //   --out FILE        output video (default <mode>.mkv). mkv survives an abrupt stop.
 //   --cues FILE       JSON cue list (key -> seconds), passed as ctx.cues
-//   --width/--height  viewport in CSS px (desktop 1440x900, phone 500x1084)
-//   --scale N         device scale factor (desktop 1.5 -> 2160x1350, phone 2 -> 1000x2168)
+//   --width/--height  desktop: viewport in CSS px (default 1440x900)
+//                     phone: size of the host WINDOW in CSS px (default: device + 40 px margin
+//                     each side, at least 500 wide, the Chromium minimum); rarely needed
+//   --device WxH      phone only: the prototype's screen in CSS px (default 390x844)
+//   --scale N         device scale factor (desktop 1.5 -> 2160x1350, phone 2 -> 780x1688 clip)
+//   --safe-top N      phone only: top safe-area inset, CSS px (default 47, the status area)
+//   --safe-bottom N   phone only: bottom safe-area inset (default 34, the home indicator)
+//   --safe-radius N   phone only: screen corner radius at 390 px width (default 44; scales with
+//                     the device width). compose.py rounds the screen with the same radius
+//   --no-status-bar   phone only: do not draw the fake status bar and home indicator
+//   --no-safe-check   phone only: skip the safe-area check (see below)
 //   --display N       X display number (default 90 desktop, 91 phone)
 //   --port N          Chromium remote-debugging port (default 9390 desktop, 9391 phone)
 //   --fps N           capture frame rate (default 30)
@@ -35,11 +44,37 @@
 //   --keep-ui         keep the pointer overlay's scrollbar/focus-ring/tooltip cleanup off
 //
 // Scenario contract (see scenario-example.mjs):
-//   export async function setup(ctx) { await ctx.page.goto(ctx.url); ... }   // not recorded
+//   export async function setup(ctx) { await ctx.open(ctx.url); ... }        // not recorded
 //   export async function run(ctx)   { await ctx.at(ctx.cues.start); ... }   // recorded, t=0 at start
-// ctx = { page, pointer, cues, mode, url, vw, vh, sleep, at(t), now(), mark(name), log }
+// ctx = { page, app, frame, open(url), pointer, cues, mode, url, vw, vh, device, sleep,
+//         at(t), now(), mark(name), checkSafeArea(label), log }
+//   app     what the scenario drives: the Page on desktop, a FrameLocator on the phone. Always use
+//           app.locator(...), app.getByRole(...) etc. so one scenario works for both modes
+//   open(u) opens the prototype: page.goto on desktop, loads it into the phone iframe
+//   frame   the Playwright Frame holding the prototype (the main frame on desktop)
+//   page    desktop: the prototype page. Phone: the HOST page (use it for the mouse and keyboard,
+//           not for locating prototype elements; pointer.* already handles that)
+//   device  phone only: the iframe rect in host CSS px { x, y, w, h, safe: {top, bottom, radius} }
 //   at(t)   waits until scenario time t seconds; records LATE if the scenario is already behind
-//   mark(n) logs an event with its scenario time (written to <out>.json)
+//   mark(n) logs an event with its scenario time (written to <out>.json); on the phone it also
+//           runs the safe-area check
+//
+// Phone capture: the prototype runs inside an iframe of exactly --device CSS px (390x844)
+// embedded in a host page, centered on a flat background, in a window of at least 500 px (the
+// Chromium minimum). The prototype therefore lays out at a real phone width. ffmpeg grabs only
+// the iframe rect, in screen pixels, so the clip is exactly device x scale (780x1688 at 2).
+// The host page tells the prototype its safe areas through CSS custom properties on its root
+// element (--safe-area-inset-top/-bottom/-left/-right, --safe-area-corner-radius, in px) and
+// through the browser's safe-area emulation when available, so env(safe-area-inset-*) works as
+// well. A fake status bar and home indicator are drawn in the insets. The prototype must be
+// framable (no X-Frame-Options / frame-ancestors that block the host).
+//
+// Safe-area check (phone): the elements with an interactive role (links, buttons, inputs,
+// role=button/tab/..., onclick, focusable) that are visible and whose box touches a rounded
+// corner zone, the top inset band or the bottom inset band are reported as events named
+// SAFE-AREA (zone, element, rect, fixed) in <out>.json and as warnings on stderr. It runs
+// after setup (page at rest) and at every mark(); call ctx.checkSafeArea(label) for more.
+// Scrolling content passes through the bands while it moves: judge those at resting points.
 //
 // Time zero: a red marker covers the page while ffmpeg starts, then disappears. compose.py
 // finds the first non-red frame and cuts both clips there, so desktop and phone share t=0.
@@ -47,7 +82,7 @@
 // The 'Chrome for Testing' banner is removed with --test-type --disable-infobars. The window
 // is fullscreen (--kiosk) on a display exactly the size of the capture, so the video is the
 // page and nothing else. Chromium refuses windows narrower than 500 CSS px, which is why the
-// phone viewport is 500 wide by default (compose.py scales it into the phone frame).
+// phone prototype is not the window itself but an iframe inside it (see Phone capture).
 
 import { spawn, execSync } from 'node:child_process';
 import { createRequire } from 'node:module';
@@ -64,7 +99,7 @@ const fail = (msg, code = 2) => { console.error('record.mjs: ' + msg); process.e
 
 // ---- arguments -------------------------------------------------------------
 const argv = process.argv.slice(2);
-const flags = new Set(['--no-cursor', '--keep-ui', '--help']);
+const flags = new Set(['--no-cursor', '--keep-ui', '--no-status-bar', '--no-safe-check', '--help']);
 const opt = {};
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i];
@@ -73,15 +108,24 @@ for (let i = 0; i < argv.length; i++) {
   else { opt[a.slice(2)] = argv[++i]; if (opt[a.slice(2)] === undefined) fail('missing value for ' + a); }
 }
 if (opt.help || !opt.scenario) {
-  console.log(readFileSync(new URL(import.meta.url), 'utf8').split('\n').filter((l) => l.startsWith('//')).slice(0, 62).map((l) => l.slice(3)).join('\n'));
+  console.log(readFileSync(new URL(import.meta.url), 'utf8').split('\n').filter((l) => l.startsWith('//')).slice(0, 100).map((l) => l.slice(3)).join('\n'));
   process.exit(opt.help ? 0 : 2);
 }
 const mode = opt.mode || 'desktop';
 if (!['desktop', 'phone'].includes(mode)) fail('--mode must be desktop or phone');
 const phone = mode === 'phone';
-const vw = +(opt.width || (phone ? 500 : 1440));
-const vh = +(opt.height || (phone ? 1084 : 900));
 const dsf = +(opt.scale || (phone ? 2 : 1.5));
+const [fw, fh] = (opt.device || '390x844').split('x').map(Number);
+if (!(fw > 0 && fh > 0)) fail('--device must look like 390x844');
+const safe = {
+  top: +(opt['safe-top'] ?? 47), bottom: +(opt['safe-bottom'] ?? 34),
+  radius: +(opt['safe-radius'] ?? 44) * fw / 390,
+};
+const even = (n, ref) => ((n - ref) % 2 ? n + 1 : n);       // keep the device centered on whole px
+const vw = phone ? even(+(opt.width || Math.max(500, fw + 80)), fw) : +(opt.width || 1440);
+const vh = phone ? even(+(opt.height || fh + 80), fh) : +(opt.height || 900);
+if (phone && (vw < fw || vh < fh)) fail(`window ${vw}x${vh} is smaller than the device ${fw}x${fh}`);
+const dev = { x: (vw - fw) / 2, y: (vh - fh) / 2, w: fw, h: fh, safe };   // iframe rect, host CSS px
 const display = +(opt.display || (phone ? 91 : 90));
 const port = +(opt.port || (phone ? 9391 : 9390));
 const fps = +(opt.fps || 30);
@@ -89,8 +133,14 @@ const crf = String(opt.crf || 12);
 const lead = +(opt.lead || 1.2);
 const hold = +(opt.hold || 0.7);
 const out = resolve(opt.out || `${mode}.mkv`);
-const W = Math.ceil(vw * dsf), H = Math.ceil(vh * dsf);
+const W = Math.ceil(vw * dsf), H = Math.ceil(vh * dsf);                     // display (window) in px
+const ev = (n) => Math.ceil(n / 2) * 2;                                     // yuv420p needs even sizes
+// What ffmpeg records: the whole display on desktop, exactly the iframe rect on the phone.
+const cap = phone
+  ? { x: Math.round(dev.x * dsf), y: Math.round(dev.y * dsf), w: ev(Math.round(fw * dsf)), h: ev(Math.round(fh * dsf)) }
+  : { x: 0, y: 0, w: W, h: H };
 if (phone && vw < 500) console.warn('record.mjs: warning: Chromium windows are at least 500 CSS px wide; --width ' + vw + ' will be widened.');
+if (phone && (cap.x + cap.w > W || cap.y + cap.h > H)) fail('capture rect falls outside the display');
 
 // ---- environment checks (fail loudly, never fall back to stills) ----------
 const have = (c) => { try { execSync(`command -v ${c}`, { stdio: 'ignore' }); return true; } catch { return false; } };
@@ -121,6 +171,7 @@ async function cleanup() {
   await sleep(300);
   for (const p of procs) { try { p.kill('SIGKILL'); } catch { /* gone */ } }
   if (profile) { try { rmSync(profile, { recursive: true, force: true }); } catch { /* ignore */ } }
+  try { rmSync(hostFile, { force: true }); } catch { /* ignore */ }
   for (const f of [`/tmp/.X${display}-lock`, `/tmp/.X11-unix/X${display}`]) { try { rmSync(f, { force: true }); } catch { /* ignore */ } }
 }
 process.on('SIGINT', async () => { await cleanup(); process.exit(130); });
@@ -143,6 +194,30 @@ if (xvfbExited) { await cleanup(); fail(`Xvfb :${display} exited at start (displ
 
 profile = mkdtempSync(join(tmpdir(), 'rec-profile-'));
 writeFileSync(join(profile, 'Local State'), '{}');
+// Phone host page: a flat background with the prototype's iframe at exactly fw x fh CSS px,
+// centered, plus an optional fake status bar and home indicator drawn inside the safe insets.
+function hostPage() {
+  const bar = opt['no-status-bar'] ? '' : `
+<div class="sb"><span>9:41</span><span class="ic"><i class="sig"></i><i class="wifi"></i><i class="bat"></i></span></div>
+<div class="hi"></div>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><title>host</title><style>
+html,body{margin:0;height:100%;overflow:hidden;background:#F2F3F5}
+iframe{position:absolute;left:${dev.x}px;top:${dev.y}px;width:${fw}px;height:${fh}px;border:0;background:#fff;display:block}
+.sb,.hi{position:absolute;pointer-events:none;z-index:2}
+.sb{left:${dev.x}px;top:${dev.y}px;width:${fw}px;height:${safe.top}px;box-sizing:border-box;padding:${Math.round(safe.top * 0.3)}px ${Math.round(fw * 0.07)}px 0;
+ display:flex;justify-content:space-between;align-items:flex-start;font:600 15px/1 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#111}
+.ic{display:flex;gap:6px;align-items:center;height:15px}
+.ic i{display:block;background:#111}
+.sig{width:17px;height:11px;clip-path:polygon(0 100%,0 70%,25% 70%,25% 100%,33% 100%,33% 45%,58% 45%,58% 100%,66% 100%,66% 20%,100% 20%,100% 100%)}
+.wifi{width:15px;height:11px;clip-path:polygon(50% 100%,0 35%,15% 20%,50% 60%,85% 20%,100% 35%)}
+.bat{width:25px;height:12px;border-radius:3.5px;background:transparent!important;border:1.5px solid rgba(17,17,17,.55);position:relative}
+.bat:after{content:"";position:absolute;inset:1.5px;border-radius:1.5px;background:#111}
+.hi{left:${dev.x + (fw - 134) / 2}px;top:${dev.y + fh - Math.round(safe.bottom * 0.4) - 5}px;width:134px;height:5px;border-radius:3px;background:#111;opacity:.85}
+</style></head><body><iframe name="device" title="prototype"></iframe>${bar}</body></html>`;
+}
+const hostFile = join(tmpdir(), `rec-host-${process.pid}.html`);
+if (phone) writeFileSync(hostFile, hostPage());
+
 const chrome = spawn(chromePath, [
   '--no-sandbox', '--no-first-run', '--no-default-browser-check', '--password-store=basic',
   '--kiosk', '--test-type', '--disable-infobars', '--hide-scrollbars',
@@ -177,31 +252,111 @@ try {
     await s.send('Emulation.setUserAgentOverride', {
       userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36',
     });
+    // Safe areas for env(safe-area-inset-*): works where the browser supports the override.
+    await s.send('Emulation.setSafeAreaInsetsOverride', { insets: { top: safe.top, bottom: safe.bottom, left: 0, right: 0 } })
+      .catch((e) => console.warn('record.mjs: note: env(safe-area-inset-*) emulation unavailable (' + e.message + '); the --safe-area-* CSS variables are still set'));
+    // Safe areas as CSS custom properties on the prototype's root element (every iframe, same-origin or not).
+    await ctx.addInitScript((sa) => {
+      if (window.self === window.top) return;
+      const css = ':root{--safe-area-inset-top:' + sa.top + 'px;--safe-area-inset-bottom:' + sa.bottom +
+        'px;--safe-area-inset-left:0px;--safe-area-inset-right:0px;--safe-area-corner-radius:' + sa.radius + 'px}';
+      const put = () => {
+        if (!document.documentElement) return false;
+        const st = document.createElement('style'); st.id = '__safe_area_vars'; st.textContent = css;
+        document.documentElement.appendChild(st); return true;
+      };
+      if (!put()) { const mo = new MutationObserver(() => { if (put()) mo.disconnect(); }); mo.observe(document, { childList: true }); }
+    }, { top: safe.top, bottom: safe.bottom, radius: +safe.radius.toFixed(2) });
   }
 
   const useCursor = !opt['no-cursor'];
-  if (useCursor) await cursor.install(ctx, { mode: phone ? 'phone' : 'desktop', clean: !opt['keep-ui'] });
+  // Phone: the host page has no pointer of its own; the dot is drawn inside the prototype's iframe.
+  if (useCursor) await cursor.install(ctx, { mode: phone ? 'phone' : 'desktop', clean: !opt['keep-ui'], where: phone ? 'frames' : 'top' });
+  if (phone) await page.goto(pathToFileURL(hostFile).href);
   const pointer = await cursor.attach(page, { mode: phone ? 'phone' : 'desktop' });
+  const appFrame = () => (phone ? page.frame({ name: 'device' }) : page.mainFrame());
+  if (phone) {
+    // A navigation inside the iframe creates a fresh overlay off-screen: re-emit the pointer position.
+    page.on('framenavigated', (f) => { if (f !== page.mainFrame()) setTimeout(() => pointer.reveal().catch(() => {}), 250); });
+  }
 
   const cues = opt.cues ? JSON.parse(readFileSync(opt.cues, 'utf8')) : {};
   const sc = await import(pathToFileURL(resolve(opt.scenario)).href);
   if (typeof sc.run !== 'function') throw new Error('scenario must export an async run(ctx)');
 
+  // ---- safe-area check (phone) ----
+  const seen = new Set();
+  const checkSafeArea = async (label = '') => {
+    if (!phone || opt['no-safe-check']) return [];
+    const frame = appFrame();
+    if (!frame) return [];
+    const found = await frame.evaluate((sa) => {
+      const W = innerWidth, H = innerHeight, R = sa.radius;
+      const sel = 'a[href],button,input:not([type=hidden]),select,textarea,summary,[role=button],[role=link],[role=tab],' +
+        '[role=checkbox],[role=radio],[role=switch],[role=menuitem],[role=option],[role=textbox],[role=searchbox],' +
+        '[role=combobox],[role=slider],[onclick],[tabindex]:not([tabindex="-1"])';
+      const name = (e) => {
+        const t = (e.getAttribute('aria-label') || e.innerText || e.value || e.placeholder || '').trim().replace(/\s+/g, ' ').slice(0, 30);
+        return e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + (e.getAttribute('role') ? '[role=' + e.getAttribute('role') + ']' : '') + (t ? ' "' + t + '"' : '');
+      };
+      const persistent = (e) => { for (let n = e; n && n !== document.body; n = n.parentElement) { const p = getComputedStyle(n).position; if (p === 'fixed' || p === 'sticky') return true; } return false; };
+      // A box is cut by a rounded corner when its point nearest to the corner lies outside the arc.
+      const cut = (r, cx, cy, sx, sy) => {   // corner (cx, cy); sx, sy = direction into the screen
+        const x0 = Math.max(r.left, sx > 0 ? 0 : W - R), x1 = Math.min(r.right, sx > 0 ? R : W);
+        const y0 = Math.max(r.top, sy > 0 ? 0 : H - R), y1 = Math.min(r.bottom, sy > 0 ? R : H);
+        if (x0 >= x1 || y0 >= y1) return false;               // box does not reach the corner square
+        const px = sx > 0 ? x0 : x1, py = sy > 0 ? y0 : y1;   // its point nearest to the corner
+        return Math.hypot(px - (cx + sx * R), py - (cy + sy * R)) > R;
+      };
+      const out = [];
+      for (const e of document.querySelectorAll(sel)) {
+        const cs = getComputedStyle(e);
+        if (cs.visibility === 'hidden' || cs.display === 'none' || +cs.opacity === 0) continue;
+        const r = e.getBoundingClientRect();
+        if (r.width < 2 || r.height < 2 || r.bottom <= 0 || r.right <= 0 || r.top >= H || r.left >= W) continue;
+        const zones = [];
+        if (cut(r, 0, 0, 1, 1)) zones.push('corner-top-left');
+        if (cut(r, W, 0, -1, 1)) zones.push('corner-top-right');
+        if (cut(r, 0, H, 1, -1)) zones.push('corner-bottom-left');
+        if (cut(r, W, H, -1, -1)) zones.push('corner-bottom-right');
+        if (r.top < sa.top) zones.push('top-inset');
+        if (r.bottom > H - sa.bottom) zones.push('bottom-inset');
+        if (zones.length) out.push({ el: name(e), zones, rect: [r.left, r.top, r.width, r.height].map((v) => Math.round(v)), fixed: persistent(e) });
+      }
+      return out;
+    }, { top: safe.top, bottom: safe.bottom, radius: safe.radius }).catch(() => []);
+    const fresh = [];
+    for (const f of found) {
+      const key = f.el + '|' + f.zones.join(',') + '|' + (f.fixed ? 'fixed' : 'scroll') + (f.fixed ? '' : '|' + f.rect.join(','));
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const ev2 = { name: 'SAFE-AREA', t: base ? +now().toFixed(3) : null, at: label, ...f };
+      events.push(ev2); fresh.push(ev2);
+      console.warn(`[phone] WARN safe-area: ${f.el} touches ${f.zones.join(' + ')} rect=${f.rect.join(',')}${f.fixed ? ' (fixed/sticky)' : ''}${label ? ' at ' + label : ''}`);
+    }
+    return fresh;
+  };
+
   let base = 0;
   const now = () => (Date.now() - base) / 1000;
   const ctxObj = {
-    page, pointer, cues, mode, url: opt.url, vw, vh, sleep, now, log: console.log,
+    page, pointer, cues, mode, url: opt.url, vw, vh, sleep, now, log: console.log, checkSafeArea,
+    app: phone ? page.frameLocator('iframe[name=device]') : page,
+    get frame() { return appFrame(); },
+    device: phone ? dev : null,
+    open: async (u, o = {}) => { await appFrame().goto(u || opt.url, { waitUntil: 'load', ...o }); },
     at: async (t) => {
       const w = base + t * 1000 - Date.now();
       if (w > 0) await sleep(w);
       else if (w < -80) events.push({ name: 'LATE', by: +(-w / 1000).toFixed(2), for: t });
     },
-    mark: (name) => { const t = +now().toFixed(3); events.push({ name, t }); console.log(`[${mode}] ${name} @ ${t}s`); },
+    mark: (name) => { const t = +now().toFixed(3); events.push({ name, t }); console.log(`[${mode}] ${name} @ ${t}s`); checkSafeArea(name); },
   };
 
   if (sc.setup) await sc.setup(ctxObj);          // open the page, wait for it: NOT recorded
-  else if (opt.url) await page.goto(opt.url);
+  else if (opt.url) await ctxObj.open(opt.url);
   await pointer.reveal().catch(() => {});
+  await checkSafeArea('setup');                  // the page at rest, before recording
 
   // Red marker so the start of the scenario can be found exactly in the video.
   await page.evaluate(() => {
@@ -211,7 +366,7 @@ try {
     document.documentElement.appendChild(m);
   });
   ff = spawn('ffmpeg', ['-loglevel', 'error', '-y', '-f', 'x11grab', '-draw_mouse', '0', '-framerate', String(fps),
-    '-video_size', `${W}x${H}`, '-i', `:${display}+0,0`,
+    '-video_size', `${cap.w}x${cap.h}`, '-i', `:${display}+${cap.x},${cap.y}`,
     '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', crf, '-pix_fmt', 'yuv420p', out],
   { stdio: ['pipe', 'inherit', 'inherit'] });
   let ffDied = false; ff.on('exit', (c) => { if (c) ffDied = true; });
@@ -226,8 +381,9 @@ try {
   ff.stdin.write('q');
   await new Promise((res) => ff.on('exit', res));
   ff = null;
-  writeFileSync(out.replace(/\.[^.]+$/, '') + '.json', JSON.stringify({ mode, vw, vh, dsf, width: W, height: H, fps, lead, events, errors }, null, 1));
-  console.log(`recorded ${out} (${W}x${H}, ${mode}); page errors: ${errors.length}`);
+  writeFileSync(out.replace(/\.[^.]+$/, '') + '.json', JSON.stringify({ mode, vw, vh, dsf, width: cap.w, height: cap.h, device: phone ? dev : undefined, fps, lead, events, errors }, null, 1));
+  const warns = events.filter((e) => e.name === 'SAFE-AREA').length;
+  console.log(`recorded ${out} (${cap.w}x${cap.h}, ${mode}); page errors: ${errors.length}` + (phone ? `; safe-area warnings: ${warns}` : ''));
 } catch (e) {
   console.error('record.mjs: ' + (e && e.stack || e));
   exitCode = 1;

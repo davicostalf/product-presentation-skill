@@ -9,6 +9,7 @@
 // The page contract is yours to define; this example expects the slide to expose
 //   window.__ready  (Promise: fonts and images loaded)
 //   window.__start({ stepName: seconds, ... })  (starts the animation plan; times are relative to the call)
+// Record it with --mode desktop only (the phone mode wraps the page in a host iframe; slides are not phone content).
 // Dependencies: none beyond record.mjs.
 
 export async function setup({ page, url }) {

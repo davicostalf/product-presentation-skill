@@ -3,7 +3,7 @@ name: product-presentation
 description: Plans and produces presentations of a product or prototype, from the script to the final delivery, including narrated demo videos that combine slides, continuous desktop and phone screen video of the live prototype, and a voice-over recorded by the presenter. Use when asked to create, review, or re-cut a product presentation or demo video, write a presentation script, build a storyboard, generate a teleprompter, or treat and sync a recorded narration with prototype screens.
 license: MIT
 metadata:
-  version: "0.3.0"
+  version: "0.3.1"
 ---
 
 # Product presentation
@@ -91,18 +91,20 @@ Non-negotiable for every video that shows a prototype. Use the scripts; do not i
 
    | Frame | Desktop window | Phone screen |
    |---|---|---|
-   | 1920x1080 | 1336x835 at (50, 122) | 415x900 at (1441, 90) |
-   | 2560x1440 | 1781x1113 at (67, 163) | 553x1200 at (1921, 120) |
+   | 1920x1080 | 1336x835 at (50, 122) | 416x900 at (1440, 90) |
+   | 2560x1440 | 1781x1113 at (67, 163) | 555x1200 at (1920, 120) |
 
-   `scripts/compose.py` produces exactly this. The target look is [assets/reference-frame.png](assets/reference-frame.png), rendered from a neutral placeholder page: match it.
-4. **Stop if the environment cannot capture.** Run `scripts/check_env.sh` first. If a virtual display (Xvfb), Chromium with Playwright or ffmpeg is missing, stop and tell the user exactly what is missing and how to install it. Never fall back to stills silently, and never deliver a slideshow as if it were a demo.
-5. **Words never come before the screen** and the prototype never acts while an attachment preview is up (see Sync and pacing).
+   The phone slot has the aspect of a 390x844 CSS px screen, so the phone clip is scaled whole, never cropped or stretched. The phone screen's corner radius is 47 px at 1080p (63 at 1440p), the 44 px safe-area corner of the prototype. `scripts/compose.py` produces exactly this. The target look is [assets/reference-frame.png](assets/reference-frame.png), rendered from a neutral placeholder page: match it.
+4. **The phone is a real phone width.** The phone take shows the prototype in an iframe of exactly 390x844 CSS px (configurable) inside a host page, so it lays out as on a real phone, not at the 500 px Chromium minimum window width. Only the iframe rect is captured. Scenarios drive the prototype through `ctx.app` (a frame locator on the phone), never through `page` (the host).
+5. **Phone safe areas.** The composition rounds the phone screen's corners and draws a bezel, and real phones have a status area and a home indicator. On the phone, keep interactive elements and key content out of the rounded corners (44 px radius) and out of the top (47 px) and bottom (34 px) safe areas. The prototype should honor `env(safe-area-inset-top/bottom)` or the `--safe-area-inset-top` / `--safe-area-inset-bottom` custom properties that the host page sets. `scripts/record.mjs` logs a `SAFE-AREA` warning for every interactive element that touches those zones; fix the prototype (or the scenario) and record again.
+6. **Stop if the environment cannot capture.** Run `scripts/check_env.sh` first. If a virtual display (Xvfb), Chromium with Playwright or ffmpeg is missing, stop and tell the user exactly what is missing and how to install it. Never fall back to stills silently, and never deliver a slideshow as if it were a demo.
+7. **Words never come before the screen** and the prototype never acts while an attachment preview is up (see Sync and pacing).
 
 | Script | Does |
 |---|---|
 | `scripts/check_env.sh` | verifies Xvfb, ffmpeg, Node, Playwright, Chromium, Pillow; lists what is missing |
-| `scripts/cursor.js` | injectable pointer overlay (arrow or touch dot) and a Node API: glide, click, type, scroll |
-| `scripts/record.mjs` | records one scenario on Xvfb + headed Chromium + ffmpeg (`--mode desktop` or `phone`) |
+| `scripts/cursor.js` | injectable pointer overlay (arrow, or touch dot inside the phone iframe) and a Node API: glide, click, type, scroll |
+| `scripts/record.mjs` | records one scenario on Xvfb + headed Chromium + ffmpeg (`--mode desktop`, or `phone` through a 390x844 iframe host page with safe-area insets and a safe-area check) |
 | `scripts/run_pair.sh` | records desktop and phone in parallel on the same clock |
 | `scripts/compose.py` | cuts both clips at time zero and composes them on the flat background at 1080p or 1440p |
 | `scripts/scenario-example.mjs` | cue-driven example scenario: open, glide, type, click, wait for load, scroll |
@@ -118,6 +120,8 @@ Non-negotiable for every video that shows a prototype. Use the scripts; do not i
 
 - **Stills instead of video:** screenshots strung together, with no transitions or loading states. Record the live interaction.
 - **No cursor:** the pointer was never injected. Use `scripts/cursor.js`.
+- **Phone at the wrong width:** the phone recorded as a 500 px window and downscaled. Use the iframe host that `record.mjs --mode phone` builds.
+- **Content in the safe area:** a button under the status bar or in a rounded corner, cut by the phone frame. Heed the `SAFE-AREA` warnings.
 - **Decorative frames:** a big box, card, border or drop shadow around the screens, or a device mockup. Flat background only.
 - **Cursor jumping:** teleporting between targets instead of gliding, or no press animation on clicks.
 - **Resting on hover targets:** the pointer parked on an element that reveals actions.

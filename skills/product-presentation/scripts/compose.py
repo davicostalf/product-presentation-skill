@@ -11,14 +11,20 @@ Layout (pixels, 16:9 frame; every number scales with the frame height):
 
                     1920x1080 (1080p)     2560x1440 (1440p)
     desktop window  1336x835 at (50,122)  1781x1113 at (67,163)    corner radius 12 / 16
-    phone screen     415x900 at (1441,90)  553x1200 at (1921,120)  corner radius 40 / 53
+    phone screen     416x900 at (1440,90)  555x1200 at (1920,120)  corner radius 47 / 63
     phone bezel      6 px outside the screen (8 px at 1440p)
-    gap between      55 px (73 px)         vertical centers: both at 540 (720)
+    gap between      54 px (72 px)         vertical centers: both at 540 (720)
 
-Inputs are the raw recordings from record.mjs (desktop 16:10, phone ~9:19.5). Each clip is cut
-at scenario time 0 (found from the red marker record.mjs shows before the scenario starts) so
-the two stay in sync, trimmed of the 2 px strip Chromium leaves at the right/bottom edge, scaled
-with lanczos and masked. Audio is not handled here; add it when assembling.
+The phone slot has the aspect of the 390x844 CSS px screen record.mjs captures (0.4621; 416x900
+is 0.4622, 555x1200 is 0.4625): the clip is scaled to the slot as a whole, not cropped, so the
+edges of the prototype stay visible. One phone CSS px is 1.067 slot px at 1080p (1.423 at 1440p),
+so the 44 px corner radius of the prototype's safe area becomes the 47 (63) px mask below.
+
+Inputs are the raw recordings from record.mjs (desktop 16:10; phone: the exact iframe rect, 780x1688
+at scale 2). Each clip is cut at scenario time 0 (found from the red marker record.mjs shows before
+the scenario starts) so the two stay in sync. The desktop clip is trimmed of the 2 px strip Chromium
+leaves at the right/bottom edge, scaled with lanczos and masked; the phone clip needs no trim and is
+scaled to the slot as is. Audio is not handled here; add it when assembling.
 
 Usage:
   python3 compose.py --desktop desktop.mkv --phone phone.mkv --out demo.mp4 [--height 1080]
@@ -47,10 +53,11 @@ from PIL import Image, ImageDraw
 
 REF_H = 1080
 DESK = (50, 122, 1336, 835)    # x, y, w, h at 1080p
-PHONE = (1441, 90, 415, 900)
-R_DESK, R_PHONE = 12, 40
+PHONE = (1440, 90, 416, 900)    # 390x844 CSS px screen: 0.4621 vs 0.4622
+R_DESK, R_PHONE = 12, 47        # phone radius = 44 CSS px safe-area corner * 416/390
 FPS = 30
-TRIM = 2                        # px cut from right/bottom of the raw capture
+TRIM = 2                        # px cut from right/bottom of the raw DESKTOP capture (none for the phone)
+PHONE_ASPECT = 390 / 844
 
 
 def die(msg, code=2):
@@ -84,6 +91,15 @@ def marker_end(path):
         elif seen:
             return i / FPS
     return None
+
+
+def probe_size(path):
+    r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height",
+                        "-of", "json", path], capture_output=True, text=True)
+    if r.returncode:
+        die(f"cannot read {path}: {r.stderr.strip()[-300:]}")
+    st = json.loads(r.stdout)["streams"][0]
+    return st["width"], st["height"]
 
 
 def rounded_mask(path, w, h, r):
@@ -141,6 +157,10 @@ def main():
         for name, t in (("desktop", t0d), ("phone", t0p)):
             if t is None:
                 die(f"no red start marker found in the {name} clip. Record with record.mjs, or pass --no-marker.")
+    cw, ch = probe_size(a.phone)
+    if abs(cw / ch - PHONE_ASPECT) / PHONE_ASPECT > 0.01:
+        print(f"compose.py: warning: phone clip is {cw}x{ch} (aspect {cw / ch:.4f}), not 390:844 ({PHONE_ASPECT:.4f}); "
+              "it will be stretched. Record it with record.mjs --mode phone (default --device 390x844).", file=sys.stderr)
     t0d += a.start
     t0p += a.start
     room = min(probe_duration(a.desktop) - t0d, probe_duration(a.phone) - t0p)
@@ -156,9 +176,11 @@ def main():
         if bz:
             bezel_image(bzp, pw + 2 * bz, ph + 2 * bz, rp + bz, (22, 23, 26, 255))
 
-        def clip(i, t0, w, h):
-            return (f"[{i}:v]trim=start={t0:.4f}:duration={dur + 1:.4f},setpts=PTS-STARTPTS,fps={FPS},"
-                    f"crop=iw-{TRIM}:ih-{TRIM}:0:0,scale={w + 4}:{h + 4}:force_original_aspect_ratio=increase:flags=lanczos,"
+        def clip(i, t0, w, h, exact=False):
+            head = f"[{i}:v]trim=start={t0:.4f}:duration={dur + 1:.4f},setpts=PTS-STARTPTS,fps={FPS},"
+            if exact:   # phone: the clip IS the screen; scale it whole, never crop an edge off
+                return head + f"scale={w}:{h}:flags=lanczos,format=yuva420p"
+            return (head + f"crop=iw-{TRIM}:ih-{TRIM}:0:0,scale={w + 4}:{h + 4}:force_original_aspect_ratio=increase:flags=lanczos,"
                     f"crop={w}:{h}:exact=1,format=yuva420p")
         loop = ["-loop", "1", "-framerate", str(FPS)]
         cmd = ["ffmpeg", "-loglevel", "error", "-y",
@@ -167,7 +189,7 @@ def main():
                *loop, "-i", md, *loop, "-i", mp]                                # 3, 4
         if bz:
             cmd += [*loop, "-i", bzp]                                           # 5
-        fc = [clip(1, t0d, dw, dh) + "[dc]", clip(2, t0p, pw, ph) + "[pc]",
+        fc = [clip(1, t0d, dw, dh) + "[dc]", clip(2, t0p, pw, ph, exact=True) + "[pc]",
               "[3:v]format=gray[md]", "[4:v]format=gray[mp]",
               "[dc][md]alphamerge[dk]", "[pc][mp]alphamerge[ph]",
               f"[0:v][dk]overlay={dx}:{dy}:format=auto[a]"]

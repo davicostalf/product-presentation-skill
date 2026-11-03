@@ -9,12 +9,14 @@
 #   bash run_pair.sh SCENARIO.mjs URL OUTDIR [CUES.json] [extra record.mjs options]
 #   bash run_pair.sh scenario.mjs http://localhost:3000/ out cues.json
 # Produces OUTDIR/desktop.mkv, OUTDIR/phone.mkv (+ .json event logs).
+# The phone take is the prototype in a 390x844 iframe inside a host page (see record.mjs): scenarios
+# locate elements through ctx.app and open the page with ctx.open(url).
 #
 # The scenario receives ctx.mode ('desktop' or 'phone') and branches where the two UIs differ.
 # Dependencies: bash, node + record.mjs and its dependencies (see check_env.sh).
 
 set -u
-if [ $# -lt 3 ]; then sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; exit 2; fi
+if [ $# -lt 3 ]; then sed -n "2,17p" "$0" | sed 's/^# \{0,1\}//'; exit 2; fi
 here="$(cd "$(dirname "$0")" && pwd)"
 scenario="$1"; url="$2"; outdir="$3"; shift 3
 cues=()

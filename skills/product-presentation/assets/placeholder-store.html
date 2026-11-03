@@ -11,6 +11,8 @@
   question row, then the page scrolls. Replace it with the real prototype for real work.
 -->
 <style>
+  /* Safe areas: honor the real env() and the vars the phone host page sets (--safe-area-inset-*). */
+  :root { --sat: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px)); --sab: max(env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px)); }
   :root { --bg:#fff; --ink:#2b2f36; --mute:#8a909a; --block:#dfe2e7; --block2:#eceef1; --line:#e4e6ea; --accent:#3b6cf0; }
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
@@ -40,8 +42,8 @@
   #results.in { opacity: 1; transform: none; }
   [hidden] { display: none !important; }
   @media (max-width: 640px) {
-    header { padding: 12px 14px; flex-wrap: wrap; gap: 10px; } nav { display: none; } .logo { width: 84px; height: 22px; }
-    form { flex-basis: 100%; max-width: none; } main { padding: 16px 14px 60px; }
+    header { padding: calc(12px + var(--sat)) 14px 12px; flex-wrap: wrap; gap: 10px; } nav { display: none; } .logo { width: 84px; height: 22px; }
+    form { flex-basis: 100%; max-width: none; } main { padding: 16px 14px calc(60px + var(--sab)); }
     .grid { grid-template-columns: repeat(2, 1fr); gap: 12px; } .banner { height: 110px; }
   }
 </style>

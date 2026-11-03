@@ -15,7 +15,7 @@ skills/product-presentation/
 ├── scripts/
 │   ├── check_env.sh                 # is real capture possible here?
 │   ├── cursor.js                    # injected pointer (arrow / touch dot) + glide, click, type, scroll
-│   ├── record.mjs                   # one scenario -> video (Xvfb + Chromium + ffmpeg)
+│   ├── record.mjs                   # one scenario -> video (Xvfb + Chromium + ffmpeg; phone = 390x844 iframe host)
 │   ├── run_pair.sh                  # desktop and phone in parallel
 │   ├── compose.py                   # desktop + phone side by side on the flat background
 │   ├── scenario-example.mjs         # cue-driven example scenario

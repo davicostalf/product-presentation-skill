@@ -2,6 +2,21 @@
 
 Notable changes to the skill. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.3.1] - 2026-11-03
+
+### Changed
+
+- Phone capture is a 390x844 iframe host: `record.mjs --mode phone` embeds the prototype in an iframe of 390x844 CSS px (configurable with `--device`), centered on a flat background in a window of at least 500 px, and records exactly the iframe rect. The prototype now lays out at a real phone width instead of the 500 px Chromium minimum that was downscaled. The touch dot is injected into the iframe (`cursor.js` option `where: 'frames'`).
+- Scenario contract: `ctx.open(url)` opens the prototype and `ctx.app` (the page on desktop, a frame locator on the phone) locates elements; `scenario-example.mjs` and the docs are updated. `ctx.device` gives the iframe rect.
+- `compose.py` phone slot is 416x900 at (1440, 90) at 1080p and 555x1200 at (1920, 120) at 1440p (the 390:844 aspect), scaled whole without cropping; corner radius 47 (63) px.
+- `assets/reference-frame.png` regenerated from the new capture.
+
+### Added
+
+- Safe-area insets: the host page sets 47 px top, 34 px bottom and a 44 px corner radius, exposed as `--safe-area-inset-*` and `--safe-area-corner-radius` custom properties and through `env(safe-area-inset-*)` emulation, with a fake status bar and home indicator (`--safe-top`, `--safe-bottom`, `--safe-radius`, `--no-status-bar`).
+- Safe-area check: `record.mjs` logs `SAFE-AREA` warnings for interactive elements that touch the rounded corners or the top and bottom bands (`--no-safe-check` to skip).
+- SKILL.md rules on phone width and phone safe areas; `assets/placeholder-store.html` honors the safe areas.
+
 ## [0.3.0] - 2026-11-03
 
 ### Fixed

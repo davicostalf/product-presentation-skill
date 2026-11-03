@@ -21,21 +21,28 @@
 //   - Move the pointer BEFORE the cue so it arrives on time; the press lands on the cue.
 //   - A short pause between filling a field and submitting it (a person reads what they typed).
 //
+//   - Locate prototype elements through `app`, never `page`: on desktop `app` is the Page, on the
+//     phone it is a frameLocator for the 390x844 iframe that holds the prototype (the page there is
+//     only the host). `app.locator(...)` and `app.getByRole(...)` then work in both modes.
+//   - Keep interactive elements out of the rounded corners and the top/bottom safe areas of the
+//     phone; record.mjs logs SAFE-AREA warnings (in <out>.json and on stderr) when they are not.
+//
 // Contract with record.mjs: export setup(ctx) (not recorded) and run(ctx) (recorded; scenario
-// time 0 is when the recording starts). ctx = { page, pointer, cues, mode, url, at, mark, sleep }.
+// time 0 is when the recording starts).
+// ctx = { page, app, frame, open, pointer, cues, mode, url, device, at, mark, sleep, checkSafeArea }
 // Dependencies: none beyond record.mjs.
 
 const lead = 0.0; // extra seconds the screen should lead the words, on top of the cue list
 
-export async function setup({ page, url }) {
-  await page.goto(url, { waitUntil: 'load' });
-  await page.locator('input[type=search]').waitFor();   // page is ready BEFORE recording starts
+export async function setup({ app, open, url }) {
+  await open(url);                                      // page.goto on desktop, iframe load on the phone
+  await app.locator('input[type=search]').waitFor();    // page is ready BEFORE recording starts
 }
 
-export async function run({ page, pointer, cues, mode, at, mark, sleep }) {
+export async function run({ app, pointer, cues, mode, device, at, mark, sleep }) {
   const when = (key) => Math.max(0.05, cues[key] - lead);
-  const field = page.locator('input[type=search]');
-  const submit = page.getByRole('button', { name: 'Search' });
+  const field = app.locator('input[type=search]');
+  const submit = app.getByRole('button', { name: 'Search' });
 
   // 1. Glide to the field and focus it, arriving as the sentence starts.
   await at(when('type') - 1.3);
@@ -55,9 +62,11 @@ export async function run({ page, pointer, cues, mode, at, mark, sleep }) {
   mark('submitted');
 
   // 4. Wait for the page to finish loading; never act on a skeleton.
-  await page.locator('#results.in').waitFor({ timeout: 15000 });
+  await app.locator('#results.in').waitFor({ timeout: 15000 });
   mark('results-visible');
-  await pointer.park(mode === 'phone' ? 380 : 900, 330, 600);   // rest in a quiet spot, not on a card
+  // Rest in a quiet spot, not on a card. Phone coordinates are host-page px: offset by the iframe rect.
+  if (mode === 'phone') await pointer.park(device.x + device.w - 24, device.y + 330, 600);
+  else await pointer.park(900, 330, 600);
 
   // 5. Scroll the results with an eased wheel, on the cue.
   await at(when('scroll'));
