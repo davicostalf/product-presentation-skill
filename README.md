@@ -30,6 +30,10 @@ skills/product-presentation/
     └── example-*.json               # example words, phrases and cues
 ```
 
+## Where to run
+
+Plan anywhere. Record and assemble in a remote Claude Code session (Claude Code on the web) or a Linux container/VM with 4+ CPUs and 8+ GB RAM, not on your own computer: the pipeline runs two browsers, screen encoders and a speech model, and can freeze a laptop. `scripts/check_env.sh` checks the machine first.
+
 ## Install
 
 **Claude Code**
