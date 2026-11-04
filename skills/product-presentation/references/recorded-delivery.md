@@ -34,6 +34,7 @@ How to turn an approved storyboard into a narrated video.
 The rules in SKILL.md ("Prototype capture rules") apply in full: the prototype parts are continuous screen video of the live interaction, with an injected pointer, on the fixed flat composition, and capture stops with a clear message if the environment cannot do it.
 
 - **Always screen video, never stills.** Typing, clicks, scrolls, page transitions and loading states are recorded as they happen. A video built from screenshots or storyboard frames is a failed delivery.
+- **Run remotely:** in a remote Claude Code session or a Linux container/VM (4+ CPUs, 8+ GB RAM), never on the presenter's computer. On constrained machines record desktop and phone one after the other instead of in parallel, and use a small transcription model (`--model small`).
 - **Check the environment first:** `scripts/check_env.sh`. Missing Xvfb, Chromium/Playwright or ffmpeg means stop and tell the user.
 - **Pointer:** injected by `scripts/cursor.js` (headless and scripted browsers draw none). Arrow on desktop, translucent dot on phone, eased glides, press animation, resting near targets and never on hover-action elements.
 - **Pipeline, per case:**

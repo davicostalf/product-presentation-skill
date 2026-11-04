@@ -3,7 +3,7 @@ name: product-presentation
 description: Plans and produces presentations of a product or prototype, from the script to the final delivery, including narrated demo videos that combine slides, continuous desktop and phone screen video of the live prototype, and a voice-over recorded by the presenter. Use when asked to create, review, or re-cut a product presentation or demo video, write a presentation script, build a storyboard, generate a teleprompter, or treat and sync a recorded narration with prototype screens.
 license: MIT
 metadata:
-  version: "0.3.1"
+  version: "0.3.2"
 ---
 
 # Product presentation
@@ -27,6 +27,17 @@ Each artifact has a single source; the others derive from it.
 | Narration | the presenter's recording, treated and cut | timing base of the video |
 | Project guidelines | a living file with the requester's decisions | reference for every round |
 | Video | assembly of slides, captures and narration | delivery |
+
+## Where to run
+
+Run the recorded pipeline in an isolated Linux environment, never on the presenter's own computer:
+
+- **Preferred:** a remote Claude Code session (Claude Code on the web, or any cloud session), with the prototype repository attached. The person follows from the app and receives the files there.
+- **Also fine:** a Linux container or VM with at least 4 CPUs and 8 GB of RAM.
+
+The pipeline runs two browsers on virtual displays, screen encoders at high resolution and, for transcription, a speech model on the CPU. On a laptop this saturates the machine and can freeze it, and on macOS or Windows the virtual display and screen grabber (Xvfb, x11grab) do not exist. `scripts/check_env.sh` refuses to continue outside Linux and warns on low resources; if it does, tell the user to open a remote session instead of working around it.
+
+Planning steps (type, script, slides, storyboard) can run anywhere.
 
 ## Workflow
 

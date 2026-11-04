@@ -2,6 +2,13 @@
 
 Notable changes to the skill. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.3.2] - 2026-11-04
+
+### Added
+
+- "Where to run" section: the recorded pipeline runs in a remote Claude Code session or a Linux container/VM, never on the presenter's computer.
+- `check_env.sh` refuses non-Linux machines and warns below 4 CPUs or 8 GB of RAM.
+
 ## [0.3.1] - 2026-11-03
 
 ### Changed

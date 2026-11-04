@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # check_env.sh - verify the machine can do REAL screen capture of a prototype.
 #
-# Checks: Xvfb (virtual display), ffmpeg with x11grab + libx264, Node 18+,
+# Checks: Linux (refuses macOS/Windows: run remotely), CPUs and RAM (warns), Xvfb (virtual display), ffmpeg with x11grab + libx264, Node 18+,
 # Playwright, a Chromium binary, Python 3 with Pillow (compose.py), numpy (cut_audio.py).
 # Exits 0 when everything needed for capture is present, 1 otherwise, and prints what is missing.
 #
@@ -14,6 +14,17 @@ missing=0
 ok()   { printf '  ok       %s\n' "$1"; }
 miss() { printf '  MISSING  %s\n           fix: %s\n' "$1" "$2"; missing=1; }
 warn() { printf '  optional %s\n           %s\n' "$1" "$2"; }
+
+echo "Machine"
+os=$(uname -s)
+if [ "$os" != "Linux" ]; then
+  miss "Linux ($os found)" "run the recorded pipeline in a remote Claude Code session or a Linux container/VM; Xvfb and x11grab do not exist on $os, and the pipeline can freeze a personal computer"
+else
+  cpus=$(nproc 2>/dev/null || echo 0)
+  mem_gb=$(awk '/MemTotal/{printf "%d", $2/1048576}' /proc/meminfo 2>/dev/null || echo 0)
+  [ "$cpus" -ge 4 ] && ok "$cpus CPUs" || warn "$cpus CPUs" "4+ recommended; record desktop and phone one after the other"
+  [ "$mem_gb" -ge 8 ] && ok "${mem_gb} GB RAM" || warn "${mem_gb} GB RAM" "8+ GB recommended; use a small transcription model"
+fi
 
 echo "Capture requirements"
 command -v Xvfb >/dev/null && ok "Xvfb" || miss "Xvfb (virtual display)" "apt-get install -y xvfb"
