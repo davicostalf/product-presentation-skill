@@ -85,7 +85,11 @@ function overlay(opts) {
         '<svg id="__body" width="24" height="24" viewBox="0 0 24 24" style="display:block;' +
         'transform-origin:3px 2px;transition:transform .08s;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))">' +
         '<path d="M3 2 L3 18.5 L7.4 14.6 L10.2 21 L12.9 19.8 L10.2 13.6 L16 13.4 Z" ' +
-        'fill="#111" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/></svg>';
+        'fill="#111" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/></svg>' +
+        '<svg id="__hand" width="24" height="24" viewBox="0 0 24 24" style="display:none;margin:-.5px 0 0 -6px;' +
+        'transform-origin:9px 2.5px;transition:transform .08s;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))">' +
+        '<path d="M9 2.5c-.9 0-1.5.7-1.5 1.5v7.2L6.6 10c-.6-.6-1.6-.6-2.2 0s-.5 1.5 0 2.1l4 5.4c.9 1.2 2 2.8 4.200 2.800h3.200c2.200 0 3.900-1.700 3.900-3.900v-4.300c0-.8-.6-1.400-1.400-1.400-.3 0-.6.1-.8.3 0-.7-.6-1.200-1.300-1.200-.4 0-.7.2-.9.4-.2-.5-.7-.8-1.200-.8-.3 0-.5.1-.7.2V4c0-.9-.7-1.500-1.500-1.500z" ' +
+        'fill="#fff" stroke="#111" stroke-width="1.2" stroke-linejoin="round"/></svg>';
     } else {
       ptr.innerHTML =
         '<div id="__body" style="position:absolute;left:-18px;top:-18px;width:36px;height:36px;' +
@@ -93,7 +97,39 @@ function overlay(opts) {
         'box-shadow:0 2px 8px rgba(0,0,0,.25);transition:transform .08s"></div>';
     }
     root.appendChild(ptr);
-    const body = () => document.getElementById('__body');
+    const body = () => {
+      const h = document.getElementById('__hand');
+      return h && h.style.display !== 'none' ? h : document.getElementById('__body');
+    };
+    // Desktop: show the cursor the page would show (hand over pointer, I-beam over text, arrow elsewhere).
+    const kindAt = (x, y) => {
+      let el = document.elementFromPoint(x, y);
+      while (el && el.nodeType === 1) {
+        const c = getComputedStyle(el).cursor;
+        if (c && c !== 'auto') return c;
+        el = el.parentElement;
+      }
+      return 'auto';
+    };
+    const setKind = (x, y) => {
+      if (!desktop) return;
+      const k = kindAt(x, y);
+      const arrow = document.getElementById('__body'), hand = document.getElementById('__hand');
+      if (!arrow || !hand) return;
+      const isHand = k === 'pointer';
+      const isText = k === 'text';
+      hand.style.display = isHand ? 'block' : 'none';
+      arrow.style.display = isHand ? 'none' : 'block';
+      arrow.style.filter = 'drop-shadow(0 2px 3px rgba(0,0,0,.35))';
+      arrow.style.margin = isText ? '-10px 0 0 -9px' : '0';
+      if (isText) {
+        arrow.innerHTML = '<path d="M8 3h8M8 21h8M12 3v18" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/><path d="M8 3h8M8 21h8M12 3v18" stroke="#111" stroke-width="1.6" stroke-linecap="round"/>';
+        arrow.dataset.kind = 'text';
+      } else if (arrow.dataset.kind === 'text') {
+        arrow.innerHTML = '<path d="M3 2 L3 18.5 L7.4 14.6 L10.2 21 L12.9 19.8 L10.2 13.6 L16 13.4 Z" fill="#111" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/>';
+        arrow.dataset.kind = '';
+      }
+    };
 
     const ripple = (x, y) => {
       const size = desktop ? 56 : 88;
@@ -109,6 +145,7 @@ function overlay(opts) {
 
     addEventListener('mousemove', (e) => {
       ptr.style.transform = 'translate(' + e.clientX + 'px,' + e.clientY + 'px)';
+      setKind(e.clientX, e.clientY);
     }, true);
     addEventListener('mousedown', (e) => {
       const b = body();

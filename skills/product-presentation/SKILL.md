@@ -3,7 +3,7 @@ name: product-presentation
 description: Plans and produces presentations of a product or prototype, from the script to the final delivery, including narrated demo videos that combine slides, continuous desktop and phone screen video of the live prototype, and a voice-over recorded by the presenter. Use when asked to create, review, or re-cut a product presentation or demo video, write a presentation script, build a storyboard, generate a teleprompter, or treat and sync a recorded narration with prototype screens.
 license: MIT
 metadata:
-  version: "0.3.2"
+  version: "0.4.0"
 ---
 
 # Product presentation
@@ -66,6 +66,7 @@ These apply to every type:
 - **People's names** without an article when the language would add one (Portuguese: "Ana", not "a Ana").
 - **Neutral words for neutral ideas**, and no exaggeration.
 - **After recording**, bring back into the script what the presenter improved while speaking.
+- **Chapter titles, captions and on-screen descriptions** describe only what the screen shows, in the domain's words ("technical specifications", not "specs sheet"), and never narrate the pointer ("the cursor moves over…").
 
 ## Storyboard
 
@@ -86,12 +87,16 @@ These apply to the storyboard and to any recorded or rehearsed delivery.
 - With a field filled in, a short pause before submitting.
 - **Attachments** (photo, document) appear once, centered over both screens blurred and frozen. The prototype acts only after the attachment leaves. The image is the same one shown in the field and in the result.
 - **Pointer:**
+  - takes the shape the page would show under it: the hand over a clickable element, the I-beam over a text field, the arrow elsewhere (`cursor.js` reads the element's computed `cursor`);
   - glides, never jumps;
   - to point at something, rests near it, never on top of an element with a hover action;
   - paths go around such elements;
   - on the phone, a touch dot;
   - rests fully inside the screen, clear of the edges (pointer radius plus 8 px), the rounded corners and the safe areas.
 - No conspicuous focus ring, tooltip or hover state that is not part of the narration.
+- **On the phone, touch only.** No hover state ever shows: a tap presses (`:active`), nothing else. `record.mjs --mode phone` strips the prototype's `:hover` rules.
+- **Reading beats.** On a screen dense with information (a product page, a confirmation with suggestions), the pointer passes over each piece the viewer should notice (the price, the delivery, each suggestion) and rests a beat on it, as someone reading would. Scroll the phone far enough to show it.
+- **Desktop and phone mirror each other.** Both make the same choices (the same product, the same answer) and end on the same action; neither does a step the other skips.
 
 ## Prototype capture rules
 
@@ -110,7 +115,8 @@ Non-negotiable for every video that shows a prototype. Use the scripts; do not i
 4. **The phone is a real phone width.** The phone take shows the prototype in an iframe of exactly 390x844 CSS px (configurable) inside a host page, so it lays out as on a real phone, not at the 500 px Chromium minimum window width. Only the iframe rect is captured. Scenarios drive the prototype through `ctx.app` (a frame locator on the phone), never through `page` (the host).
 5. **Phone safe areas.** The composition rounds the phone screen's corners and draws a bezel, and real phones have a status area and a home indicator. On the phone, keep interactive elements and key content out of the rounded corners (44 px radius) and out of the top (47 px) and bottom (34 px) safe areas. The prototype should honor `env(safe-area-inset-top/bottom)` or the `--safe-area-inset-top` / `--safe-area-inset-bottom` custom properties that the host page sets. `scripts/record.mjs` logs a `SAFE-AREA` warning for every interactive element that touches those zones; fix the prototype (or the scenario) and record again.
 6. **Stop if the environment cannot capture.** Run `scripts/check_env.sh` first. If a virtual display (Xvfb), Chromium with Playwright or ffmpeg is missing, stop and tell the user exactly what is missing and how to install it. Never fall back to stills silently, and never deliver a slideshow as if it were a demo.
-7. **Words never come before the screen** and the prototype never acts while an attachment preview is up (see Sync and pacing).
+7. **The prototype's own tools never show.** A state panel, a debug or settings button, a native tooltip from the capture's own markup: hide them with `record.mjs --hide '<selectors>'`.
+8. **Words never come before the screen** and the prototype never acts while an attachment preview is up (see Sync and pacing).
 
 | Script | Does |
 |---|---|
@@ -128,6 +134,13 @@ Non-negotiable for every video that shows a prototype. Use the scripts; do not i
 
 `assets/placeholder-store.html` is a neutral page to try the scripts on before touching the real prototype.
 
+## What the prototype needs before capture
+
+Fix these in the prototype, not in the edit:
+
+- **A solid band under the phone's status area**, as an installed web app has, so content scrolls beneath it instead of under the clock and battery.
+- **Visible in-between states.** Loading, applying a filter, an agent typing: each shows a brief, readable state (a progress line, dimmed results, a typing indicator). A screen that swaps instantly reads as a cut in the video.
+
 ## Common mistakes
 
 - **Stills instead of video:** screenshots strung together, with no transitions or loading states. Record the live interaction.
@@ -139,6 +152,11 @@ Non-negotiable for every video that shows a prototype. Use the scripts; do not i
 - **Resting on hover targets:** the pointer parked on an element that reveals actions.
 - **Acting while the attachment preview is up:** the prototype must wait until it leaves.
 - **Words before the screen:** the sentence names something that is not visible yet.
+- **Arrow over a button:** the desktop pointer never turning into the hand over clickable elements.
+- **Hover on the phone:** a hover highlight or a hovering pointer on a touch screen.
+- **Tools on screen:** the prototype's state panel or debug button recorded with the product.
+- **Skimming dense screens:** the pointer rushing past prices and details instead of reading them.
+- **Mismatched sides:** desktop picks one thing and the phone another, or one side does an extra step.
 - **Silent fallback:** capture tooling missing and the video built from stills anyway. Stop and report instead.
 
 ## Working mode
