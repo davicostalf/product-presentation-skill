@@ -6,7 +6,7 @@ Notable changes to the skill. Format based on [Keep a Changelog](https://keepach
 
 ### Added
 
-- Script rules for narration that is heard, not read: write for the ear (nouns over pronouns, named referents, where to look first, explicit connectors), narrate an action in the order it happens, who acts before what happens, no preamble, one action per clause, known before new, and no colons.
+- Script rules for narration that is heard, not read: write for the ear (nouns over pronouns, named referents, where to look first, explicit connectors), narrate an action in the order it happens, who acts before what happens, no preamble, one action per clause, known before new, no colons, and a one-sentence definition for every new term the first time it is said.
 
 ## [0.4.0] - 2026-11-12
 

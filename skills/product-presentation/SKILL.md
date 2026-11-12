@@ -65,6 +65,7 @@ These apply to every type:
 - **No preamble before the content** ("the title says it all:", "it's worth noting that", "the interesting part is").
 - **One action per clause, in sequence**, joined by "and" or "then", never one nested inside another.
 - **What is already on screen comes before what is new.** The sentence starts on the element the viewer just saw and ends on the new information.
+- **Explain every new term the first time it is said.** A word the audience has not heard before, or one used with a specific meaning in this proposal (a new concept, a renamed action, a label invented for the product), gets a one-sentence definition right after it, in plain words, before the video relies on it.
 - **No colons in narration.** A colon is a written pause; spoken, it either disappears or sounds like reading. Join with "and", "that", "because", or split into two sentences.
 - **Natural connectors** between ideas, so nothing sounds cut off.
 - **Claim only what the screen shows** and what has been checked. Every action shown is spoken, and everything spoken appears.
