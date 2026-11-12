@@ -2,6 +2,12 @@
 
 Notable changes to the skill. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.4.1] - 2026-11-12
+
+### Added
+
+- Script rules for narration that is heard, not read: write for the ear (nouns over pronouns, named referents, where to look first, explicit connectors), narrate an action in the order it happens, who acts before what happens, no preamble, one action per clause, known before new, and no colons.
+
 ## [0.4.0] - 2026-11-12
 
 ### Added
