@@ -42,6 +42,8 @@
 //   --hold S          seconds kept recording after run() returns (default 0.7)
 //   --no-cursor       do not draw the pointer (slides and other non-interactive pages only)
 //   --keep-ui         keep the pointer overlay's scrollbar/focus-ring/tooltip cleanup off
+//   --hide SELECTORS  CSS selectors hidden in every frame during capture: the prototype's own tools
+//                     (a control panel, a debug button), e.g. --hide '[data-corner], .pc-root'
 //
 // Scenario contract (see scenario-example.mjs):
 //   export async function setup(ctx) { await ctx.open(ctx.url); ... }        // not recorded
@@ -213,7 +215,7 @@ iframe{position:absolute;left:${dev.x}px;top:${dev.y}px;width:${fw}px;height:${f
 .bat{width:25px;height:12px;border-radius:3.5px;background:transparent!important;border:1.5px solid rgba(17,17,17,.55);position:relative}
 .bat:after{content:"";position:absolute;inset:1.5px;border-radius:1.5px;background:#111}
 .hi{left:${dev.x + (fw - 134) / 2}px;top:${dev.y + fh - Math.round(safe.bottom * 0.4) - 5}px;width:134px;height:5px;border-radius:3px;background:#111;opacity:.85}
-</style></head><body><iframe name="device" title="prototype"></iframe>${bar}</body></html>`;
+</style></head><body><iframe name="device" aria-label="prototype"></iframe>${bar}</body></html>`;
 }
 const hostFile = join(tmpdir(), `rec-host-${process.pid}.html`);
 if (phone) writeFileSync(hostFile, hostPage());
@@ -267,6 +269,42 @@ try {
       };
       if (!put()) { const mo = new MutationObserver(() => { if (put()) mo.disconnect(); }); mo.observe(document, { childList: true }); }
     }, { top: safe.top, bottom: safe.bottom, radius: +safe.radius.toFixed(2) });
+  }
+
+  // The prototype's own tools (a state panel, a debug button) are not part of what is presented.
+  if (opt.hide) {
+    await ctx.addInitScript((sel) => {
+      const put = () => {
+        if (!document.documentElement) return false;
+        const st = document.createElement('style'); st.id = '__capture_hide';
+        st.textContent = sel + '{display:none!important}';
+        document.documentElement.appendChild(st); return true;
+      };
+      if (!put()) { const mo = new MutationObserver(() => { if (put()) mo.disconnect(); }); mo.observe(document, { childList: true }); }
+    }, opt.hide);
+  }
+  // Phone: a touch screen has no hover. Drop every :hover rule from the prototype's stylesheets, now and as
+  // new ones load, so a tap never leaves a hover highlight behind (only :active shows).
+  if (phone) {
+    await ctx.addInitScript(() => {
+      if (window.self === window.top) return;
+      const strip = () => {
+        for (const sheet of Array.from(document.styleSheets)) {
+          let rules; try { rules = sheet.cssRules; } catch { continue; }
+          const walk = (list, owner) => {
+            for (let i = list.length - 1; i >= 0; i--) {
+              const rule = list[i];
+              if (rule.selectorText && rule.selectorText.includes(':hover')) owner.deleteRule(i);
+              else if (rule.cssRules) walk(rule.cssRules, rule);
+            }
+          };
+          walk(rules, sheet);
+        }
+      };
+      // Stylesheets land in <head> (dev servers inject <style> tags as modules load): watch only that.
+      const start = () => { strip(); new MutationObserver(strip).observe(document.head || document.documentElement, { childList: true }); window.addEventListener('load', strip); };
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+    });
   }
 
   const useCursor = !opt['no-cursor'];

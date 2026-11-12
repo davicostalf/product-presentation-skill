@@ -66,6 +66,7 @@ The rules in SKILL.md ("Prototype capture rules") apply in full: the prototype p
 - One frame per spoken line, on contact sheets, checked against the storyboard before delivery.
 - Check that the video moves: frames from different seconds of a prototype segment must differ (pointer in a new place, text typed, page changed). A segment where frames repeat is a slideshow.
 - Probes in the page during capture (e.g. log every 50 ms whether any hover button is visible), to prove what the eye cannot see in thumbnails.
+- Look at the contact sheet of every clip before delivering it, never only at a sample, and check on it: the hand over clickable elements on desktop, no hover on the phone, no prototype tools on screen, both sides making the same choices and ending on the same action.
 - Sensitive points:
   - screen loaded before the narration mentions it;
   - case covers holding through the case intro;

@@ -2,6 +2,21 @@
 
 Notable changes to the skill. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] - 2026-11-12
+
+### Added
+
+- `cursor.js`: on desktop the pointer takes the shape the page would show under it (the hand over clickable elements, the I-beam over text fields, the arrow elsewhere).
+- `record.mjs --hide SELECTORS`: hides the prototype's own tools (a state panel, a debug button) in every frame during capture.
+- `record.mjs --mode phone` strips the prototype's `:hover` rules, so a tap never leaves a hover highlight.
+- Rules in SKILL.md: pointer shape, touch only on the phone, reading beats on dense screens, desktop and phone mirroring each other, the prototype's tools never on screen, chapter and caption texts that describe only what is shown and never the pointer.
+- "What the prototype needs before capture": a solid band under the phone's status area, and visible in-between states (loading, applying, typing).
+- Verification: the contact sheet of every clip, with the new checks.
+
+### Fixed
+
+- The phone host page's iframe had `title="prototype"`, which showed as a native tooltip over the phone screen when the pointer rested on it. It is now an `aria-label`.
+
 ## [0.3.2] - 2026-11-04
 
 ### Added
