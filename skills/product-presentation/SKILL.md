@@ -3,7 +3,7 @@ name: product-presentation
 description: Plans and produces presentations of a product or prototype, from the script to the final delivery, including narrated demo videos that combine slides, continuous desktop and phone screen video of the live prototype, and a voice-over recorded by the presenter. Use when asked to create, review, or re-cut a product presentation or demo video, write a presentation script, build a storyboard, generate a teleprompter, or treat and sync a recorded narration with prototype screens.
 license: MIT
 metadata:
-  version: "0.4.0"
+  version: "0.4.1"
 ---
 
 # Product presentation
@@ -59,6 +59,14 @@ These apply to every type:
   - sentences with a parenthetical pause in the middle.
 
   Put the main clause first and the explanation after it.
+- **Write for the ear, not the page.** The viewer hears each sentence once while looking at something else. Prefer the noun to the pronoun, name what "the two" or "this" refers to, say where to look before what is there, and keep the connectors explicit. A few more words are fine when they save the listener from reconstructing the sentence; filler is not.
+- **Narrate an action in the order it happens on screen**, with the verb of what the person does: first where they go, then what they ask for or click ("the merchant opens the metric menu and asks to analyze the CTR"). Never compress a step into an adverbial ("analyzes the CTR straight from the metric menu").
+- **Who acts comes before what happens.** Subject and action verb first; no passive voice and no verb turned into a noun ("the merchant creates the task", not "the task creation is done"). An opening time clause is fine when it names who acts ("when the merchant opens the finding, they see…"); an impersonal one is not ("on opening the finding, …").
+- **No preamble before the content** ("the title says it all:", "it's worth noting that", "the interesting part is").
+- **One action per clause, in sequence**, joined by "and" or "then", never one nested inside another.
+- **What is already on screen comes before what is new.** The sentence starts on the element the viewer just saw and ends on the new information.
+- **Explain every new term the first time it is said.** A word the audience has not heard before, or one used with a specific meaning in this proposal (a new concept, a renamed action, a label invented for the product), gets a one-sentence definition right after it, in plain words, before the video relies on it.
+- **No colons in narration.** A colon is a written pause; spoken, it either disappears or sounds like reading. Join with "and", "that", "because", or split into two sentences.
 - **Natural connectors** between ideas, so nothing sounds cut off.
 - **Claim only what the screen shows** and what has been checked. Every action shown is spoken, and everything spoken appears.
 - **One sentence per screen segment.** A sentence spoken over a cover ends on the cover; the next screen starts with a new sentence.
