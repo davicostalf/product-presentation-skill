@@ -1,0 +1,456 @@
+<!doctype html>
+<html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teleprompter</title>
+<!-- Template filled by scripts/teleprompter.py: it replaces the TP_DATA placeholder in the script below. Serve over http://localhost, never file://. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column on a dark stage, a fixed reading line at 38% height, controls in a quiet bottom bar. The sentence being read is the only bright one. */
+:root {
+  --stage: #101214;
+  --ink: #F2F4F6;
+  --ahead: #7C838C;
+  --past: #3E434A;
+  --dim: #6E747C;
+  --cue: #8FA3B8;
+  --line: #E8B04A;
+  --live: #6FCF97;
+  --bar: #181B1F;
+  --edge: #2A2E34;
+  --read: "Atkinson Hyperlegible", "Segoe UI", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --size: 44px;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--stage); color: var(--ink); font-family: var(--read); overflow: hidden; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--stage); }
+
+#viewport { position: fixed; inset: 0; overflow: hidden; }
+#roll { position: absolute; left: 0; right: 0; top: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); will-change: transform; }
+.col { max-width: 32ch; margin: 0 auto; font-size: var(--size); line-height: 1.5; padding-block: 38vh 70vh; display: flex; flex-direction: column; gap: 1.1em; }
+.sec { display: flex; flex-direction: column; gap: 0.7em; }
+.sec-head { font-family: var(--mono); font-size: 0.36em; letter-spacing: 0.08em; text-transform: uppercase; color: var(--line); border-top: 1px solid var(--edge); padding-top: 0.9em; }
+.cue { font-family: var(--mono); font-size: 0.34em; line-height: 1.5; color: var(--cue); }
+.cue::before { content: attr(data-label) " · "; color: var(--dim); }
+.p b { font-weight: 700; }
+.s { color: var(--ahead); transition: color 0.3s; }
+.s.past { color: var(--past); }
+.s.now { color: var(--ink); }
+.w.em { text-decoration: underline; text-decoration-color: var(--line); text-decoration-thickness: 0.08em; text-underline-offset: 0.16em; }
+.pause { color: var(--line); font-weight: 700; padding-inline: 0.15em; }
+
+#guide { position: fixed; left: 0; right: 0; top: 38vh; height: 0; border-top: 2px solid var(--line); opacity: 0.45; pointer-events: none; z-index: 2; }
+#guide::before, #guide::after { content: ""; position: absolute; top: -9px; border: 8px solid transparent; }
+#guide::before { left: max(8px, env(safe-area-inset-left, 0px)); border-left-color: var(--line); }
+#guide::after { right: max(8px, env(safe-area-inset-right, 0px)); border-right-color: var(--line); }
+
+#count { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 22vh; color: var(--line); background: rgba(16, 18, 20, 0.7); z-index: 5; }
+#count[hidden] { display: none; }
+
+#bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 4; background: var(--bar); border-top: 1px solid var(--edge); padding-block: 10px calc(10px + env(safe-area-inset-bottom, 0px)); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; font-family: var(--mono); font-size: 13px; color: var(--dim); transition: opacity 0.4s; }
+body.running #bar { opacity: 0.12; }
+body.running #bar:hover, body.running #bar:focus-within { opacity: 1; }
+[hidden] { display: none !important; }
+.grp { display: flex; align-items: center; gap: 6px; }
+.grp .val { color: var(--ink); min-width: 4.5ch; text-align: center; font-variant-numeric: tabular-nums; }
+button { font: inherit; color: var(--ink); background: transparent; border: 1px solid var(--edge); border-radius: 6px; padding: 6px 10px; cursor: pointer; }
+button:hover { border-color: var(--dim); }
+button:focus-visible { outline: 2px solid var(--line); outline-offset: 2px; }
+button[aria-pressed="true"] { border-color: var(--line); color: var(--line); }
+button:disabled { opacity: 0.4; cursor: not-allowed; }
+#play { background: var(--line); color: var(--stage); border-color: var(--line); font-weight: 500; min-width: 9ch; }
+#status { color: var(--dim); }
+#status.on { color: var(--live); }
+#time { margin-left: auto; color: var(--ink); font-variant-numeric: tabular-nums; }
+.keys { width: 100%; color: var(--dim); font-size: 12px; }
+.keys kbd { font: inherit; color: var(--ink); border: 1px solid var(--edge); border-radius: 4px; padding: 0 5px; }
+@media (max-width: 640px) { :root { --size: 30px; } .keys { display: none; } #time { margin-left: 0; } }
+@media (prefers-reduced-motion: reduce) { .s { transition: none; } }
+</style>
+
+<div id="viewport"><div id="roll"><div class="col" id="col"></div></div></div>
+<div id="guide" aria-hidden="true"></div>
+<div id="count" hidden></div>
+
+<div id="bar" role="toolbar" data-ui-aria="toolbar">
+  <button id="play" type="button" data-ui="start">Start</button>
+  <button id="restart" type="button" data-ui="restart">Restart</button>
+  <div class="grp"><span data-ui="follow">Follow</span><button id="modeTime" type="button" aria-pressed="true" data-ui="modeTime">Pace</button><button id="modeVoice" type="button" aria-pressed="false" data-ui="modeVoice">Voice</button></div>
+  <div class="grp" id="paceGrp"><button id="slower" type="button" data-ui-aria="slower">−</button><span class="val" id="wpm">120</span><button id="faster" type="button" data-ui-aria="faster">+</button><span data-ui="wpmUnit">wpm</span></div>
+  <div class="grp"><button id="prev" type="button" data-ui-aria="prevSentence" data-ui="prev">◀ Sentence</button><button id="next" type="button" data-ui-aria="nextSentence" data-ui="next">Sentence ▶</button></div>
+  <div class="grp"><span data-ui="text">Text</span><button id="smaller" type="button" data-ui-aria="smallerText">A−</button><button id="bigger" type="button" data-ui-aria="biggerText">A+</button></div>
+  <button id="mirror" type="button" aria-pressed="false" data-ui="mirror">Mirror</button>
+  <span id="status" role="status"></span>
+  <span id="time">0:00 / 0:00</span>
+  <div class="keys" data-ui-html="keys"></div>
+</div>
+
+<script>
+
+// Data injected by scripts/teleprompter.py: { sections: [{head, cue?, ps: [{text, cue}]}], ui, lang, wpm, sectionPause, title }
+const TP = /*TP_DATA*/null;
+const SCRIPT = TP.sections;
+const UI = TP.ui;
+const T = (k, ...a) => (UI[k] || k).replace(/\{(\d+)\}/g, (_, n) => a[n]);
+document.title = TP.title || document.title;
+document.documentElement.lang = TP.lang;
+document.querySelectorAll("[data-ui]").forEach((el) => { el.textContent = UI[el.dataset.ui]; });
+document.querySelectorAll("[data-ui-aria]").forEach((el) => { el.setAttribute("aria-label", UI[el.dataset.uiAria]); });
+document.querySelectorAll("[data-ui-html]").forEach((el) => { el.innerHTML = UI[el.dataset.uiHtml]; });
+const SECTION_PAUSE = TP.sectionPause; // seconds of breath between sections
+const BREATH = 0.6;        // seconds a "/" holds the roll
+let pendingPause = 0;
+let stressed = false;
+
+const $ = (id) => document.getElementById(id);
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("tp:" + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem("tp:" + k, JSON.stringify(v)); } catch {} }
+};
+const norm = (w) => w.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\p{L}\p{N}]/gu, "");
+
+let wpm = store.get("pace", TP.wpm);
+let size = store.get("size", 44);
+let mirrored = store.get("mirror", false);
+let mode = "time";
+
+// Build the roll: sentences hold words, so one sentence can be lit at a time.
+const col = $("col");
+const words = [];      // { el, sec, sent, key }
+const sentences = [];  // { el, first, last }
+const secStart = [];
+SCRIPT.forEach((s, si) => {
+  const sec = document.createElement("section");
+  sec.className = "sec";
+  const head = document.createElement("div");
+  head.className = "sec-head";
+  head.textContent = s.head;
+  sec.append(head);
+  secStart.push(words.length);
+  s.ps.forEach(({ text, cue: cueText }) => {
+    if (cueText) {
+      const cue = document.createElement("div");
+      cue.className = "cue";
+      cue.dataset.label = UI.screen;
+      cue.textContent = cueText;
+      sec.append(cue);
+    }
+    const p = document.createElement("p");
+    p.className = "p";
+    let sentEl = null;
+    const openSentence = () => {
+      sentEl = document.createElement("span");
+      sentEl.className = "s";
+      p.append(sentEl);
+      sentences.push({ el: sentEl, first: words.length, last: words.length });
+    };
+    openSentence();
+    text.split(/(\*\*[^*]+\*\*)/).filter(Boolean).forEach((chunk) => {
+      const bold = chunk.startsWith("**");
+      chunk.replace(/\*\*/g, "").split(/\s+/).filter(Boolean).forEach((raw) => {
+        // "/" marks a breath; _word_ (or _two words_) marks stress.
+        if (raw === "/") {
+          const mark = document.createElement("span");
+          mark.className = "pause";
+          mark.textContent = "/";
+          (sentEl || p).append(mark, " ");
+          pendingPause += BREATH;
+          return;
+        }
+        if (raw.startsWith("_")) stressed = true;
+        const w = raw.replace(/_/g, "");
+        if (!sentEl) openSentence();
+        const span = document.createElement("span");
+        span.className = stressed ? "w em" : "w";
+        span.textContent = w;
+        if (/_["”’.,?!:;]*$/.test(raw)) stressed = false;
+        const host = bold ? sentEl.appendChild(document.createElement("b")) : sentEl;
+        host.append(span);
+        sentEl.append(" ");
+        sentences[sentences.length - 1].last = words.length;
+        words.push({ el: span, sec: si, sent: sentences.length - 1, key: norm(w), pause: pendingPause });
+        pendingPause = 0;
+        if (/[.?!]["”’]?$/.test(w)) sentEl = null;
+      });
+    });
+    sec.append(p);
+  });
+  col.append(sec);
+});
+// A trailing sentence opened but never filled would be empty; drop it.
+if (sentences.length && sentences[sentences.length - 1].first > words.length - 1) sentences.pop();
+
+// Pace timeline for the Ritmo mode.
+let times = [];
+function buildTimes() {
+  times = [];
+  let t = 0;
+  words.forEach((w, i) => {
+    if (i > 0 && secStart.includes(i)) t += SECTION_PAUSE;
+    t += w.pause || 0;
+    times.push(t);
+    t += 60 / wpm;
+  });
+  times.push(t);
+}
+let tops = [];
+function measure() { tops = words.map((w) => w.el.offsetTop + w.el.offsetHeight / 2); }
+
+const roll = $("roll");
+const guideY = () => window.innerHeight * 0.38;
+let pos = 0;        // fractional word index shown on the line
+let target = 0;     // where the roll is heading
+let clock = 0;
+let running = false;
+let last = 0;
+let litSentence = -1;
+
+function wordAtTime(t) {
+  let lo = 0, hi = words.length - 1;
+  while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (times[mid] <= t) lo = mid; else hi = mid - 1; }
+  return lo;
+}
+function posFromClock() {
+  const i = wordAtTime(clock);
+  const span = times[i + 1] - times[i] || 1;
+  return i + Math.min(1, Math.max(0, (clock - times[i]) / span));
+}
+function yAt(p) {
+  const i = Math.max(0, Math.min(words.length - 1, Math.floor(p)));
+  const j = Math.min(i + 1, words.length - 1);
+  return tops[i] + (tops[j] - tops[i]) * (p - i);
+}
+function light(wordIndex) {
+  const s = words[Math.max(0, Math.min(words.length - 1, wordIndex))].sent;
+  if (s === litSentence) return;
+  litSentence = s;
+  sentences.forEach((x, k) => {
+    x.el.classList.toggle("past", k < s);
+    x.el.classList.toggle("now", k === s);
+  });
+}
+function draw() {
+  roll.style.transform = `translateY(${-(yAt(pos) - guideY())}px)` + (mirrored ? " scaleX(-1)" : "");
+  light(Math.floor(pos));
+  const total = times[times.length - 1];
+  const t = mode === "time" ? clock : times[Math.min(words.length - 1, Math.floor(pos))];
+  $("time").textContent = `${fmt(Math.min(t, total))} / ${fmt(total)}`;
+}
+const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+
+function frame(now) {
+  const dt = Math.min(0.1, (now - last) / 1000);
+  last = now;
+  if (running && mode === "time") {
+    clock += dt;
+    if (clock >= times[times.length - 1]) { clock = times[times.length - 1]; pause(); }
+    target = posFromClock();
+    pos = target;
+  } else {
+    pos += (target - pos) * Math.min(1, dt * 6); // ease toward the spoken word
+  }
+  draw();
+  requestAnimationFrame(frame);
+}
+
+// Voice: browser speech recognition, matched forward from where the reading is.
+const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null;
+let heard = 0;          // next word expected
+let finalWords = [];    // recognized tokens of the current utterance
+let silentRounds = 0;   // "no-speech" endings since the last recognized word
+let lastMatch = 0;      // when the reading last advanced
+let lastResult = 0;     // when the recognizer last returned anything
+function status(text, on) { const el = $("status"); el.textContent = text; el.classList.toggle("on", !!on); }
+/* Align recognized tokens to the script. Matches the last ~6 recognized words backwards against each candidate end position in a
+   forward window from the next expected word (longer words weigh 2, short ones 1; a small penalty for distance). After ~4 s
+   without a match (`lost`) the window widens (160 words ahead, 20 back) and the bar to accept rises. Returns the matched word
+   index or -1. Pure: used by alignTo and testable from the console. */
+function findMatch(tokens, heard, lost) {
+  const tail = tokens.slice(-6);
+  if (!tail.length) return -1;
+  let best = -1, bestScore = 0;
+  const ahead = lost ? 160 : 40;
+  for (let end = Math.max(0, heard - (lost ? 20 : 2)); end < Math.min(words.length, heard + ahead); end++) {
+    let score = 0, si = end, ti = tail.length - 1;
+    while (ti >= 0 && si >= 0 && si > end - 10) {
+      if (words[si].key && words[si].key === tail[ti]) { score += tail[ti].length > 3 ? 2 : 1; ti--; si--; }
+      else if (ti > 0 && words[si].key === tail[ti - 1]) { ti--; }
+      else si--;
+    }
+    const adjusted = score - Math.max(0, end - heard) * 0.05;
+    if (adjusted > bestScore) { bestScore = adjusted; best = end; }
+  }
+  return best >= 0 && bestScore >= (lost ? 4 : 3) ? best : -1;
+}
+function alignTo(tokens) {
+  const best = findMatch(tokens, heard, performance.now() - lastMatch > 4000);
+  if (best < 0) return;
+  lastMatch = performance.now();
+  for (let k = heard; k <= best; k++) words[k]?.el.classList.add("heard");
+  heard = best + 1;
+  target = Math.min(words.length - 1, heard);
+  if (heard >= words.length) stopVoice(T("end"));
+}
+function startVoice() {
+  if (!Recognition) { status(T("noApi")); return false; }
+  try {
+    rec = new Recognition();
+    rec.lang = TP.speechLang;
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.onresult = (e) => {
+      let text = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) text += " " + e.results[i][0].transcript;
+      const tokens = text.split(/\s+/).map(norm).filter(Boolean);
+      silentRounds = 0;
+      lastResult = performance.now();
+      status(T("hearing") + " " + text.trim().split(/\s+/).slice(-6).join(" "), true);
+      alignTo(finalWords.concat(tokens));
+      if (e.results[e.results.length - 1].isFinal) finalWords = finalWords.concat(tokens).slice(-12);
+    };
+    rec.onerror = (e) => {
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") { stopVoice(T("micBlocked")); }
+      else if (e.error === "audio-capture") { stopVoice(T("noMic")); }
+      else if (e.error === "network") { status(T("network")); }
+      else if (e.error === "language-not-supported") { stopVoice(T("langUnsupported")); }
+      else if (e.error === "no-speech") { silentRounds++; status(T("noSpeech", silentRounds)); }
+      else if (e.error !== "aborted") status(T("error", e.error));
+    };
+    rec.onaudiostart = () => { if (!silentRounds) status(T("micOn"), true); };
+    rec.onspeechstart = () => status(T("soundHeard"), true);
+    rec.onend = () => { if (running && mode === "voice") restartVoice(); };
+    rec.start();
+    status(T("listening"), true);
+    return true;
+  } catch {
+    status(T("cannotListen"));
+    return false;
+  }
+}
+/* Chrome ends recognition on its own from time to time. Restart after a short delay, on a new object; a watchdog
+   restarts it too when 8 s pass with no result while reading. A "network" error keeps retrying instead of stopping. */
+let restarting = false;
+function restartVoice() {
+  if (restarting) return; restarting = true;
+  try { rec && (rec.onend = null, rec.abort()); } catch {}
+  setTimeout(() => { restarting = false; if (running && mode === "voice") { finalWords = []; startVoice(); } }, 300);
+}
+setInterval(() => { if (running && mode === "voice" && performance.now() - lastResult > 8000) { lastResult = performance.now(); restartVoice(); } }, 2000);
+function stopVoice(msg) {
+  try { rec && (rec.onend = null, rec.stop()); } catch {}
+  rec = null;
+  if (running) pause();
+  if (msg) status(msg);
+}
+
+let wakeLock = null;
+async function lockScreen() { try { wakeLock = await navigator.wakeLock?.request("screen"); } catch {} }
+
+function play() {
+  if (running) return;
+  const go = () => {
+    if (mode === "voice") { lastResult = lastMatch = performance.now(); if (!startVoice()) return; }
+    running = true;
+    document.body.classList.add("running");
+    $("play").textContent = T("pause");
+    lockScreen();
+  };
+  const atStart = mode === "time" ? clock === 0 : heard === 0;
+  if (atStart && mode === "time" && !matchMedia("(prefers-reduced-motion: reduce)").matches) countdown(go); else go();
+}
+function pause() {
+  running = false;
+  document.body.classList.remove("running");
+  $("play").textContent = T("resume");
+  if (mode === "voice") { try { rec && (rec.onend = null, rec.stop()); } catch {} rec = null; status(T("paused")); }
+  try { wakeLock?.release(); } catch {}
+}
+function countdown(done) {
+  const el = $("count");
+  let n = 3;
+  el.hidden = false;
+  el.textContent = n;
+  const iv = setInterval(() => {
+    n -= 1;
+    if (n === 0) { clearInterval(iv); el.hidden = true; done(); } else el.textContent = n;
+  }, 700);
+}
+function goToWord(i) {
+  i = Math.max(0, Math.min(words.length - 1, i));
+  clock = times[i];
+  heard = i;
+  finalWords = [];
+  words.forEach((w, k) => w.el.classList.toggle("heard", k < i));
+  target = i;
+  if (mode === "time") pos = i;
+}
+function jumpSentence(d) {
+  const cur = words[Math.max(0, Math.min(words.length - 1, Math.round(target)))].sent;
+  const s = Math.max(0, Math.min(sentences.length - 1, cur + d));
+  goToWord(sentences[s].first);
+}
+function setMode(m) {
+  if (running) pause();
+  mode = m;
+  $("modeTime").setAttribute("aria-pressed", m === "time");
+  $("modeVoice").setAttribute("aria-pressed", m === "voice");
+  $("paceGrp").hidden = m === "voice";
+  goToWord(Math.round(target));
+  status(m === "voice" ? (Recognition ? T("pressStart") : T("noApi")) : "");
+  $("play").textContent = T("start");
+}
+function setPace(v) {
+  const p = posFromClock();
+  wpm = Math.max(90, Math.min(220, v));
+  store.set("pace", wpm);
+  $("wpm").textContent = wpm;
+  buildTimes();
+  const i = Math.floor(p);
+  clock = times[i] + (p - i) * (times[i + 1] - times[i]);
+}
+function setSize(v) {
+  size = Math.max(24, Math.min(80, v));
+  store.set("size", size);
+  document.documentElement.style.setProperty("--size", size + "px");
+  measure();
+}
+
+$("play").onclick = () => (running ? pause() : play());
+$("restart").onclick = () => { pause(); goToWord(0); clock = 0; pos = 0; $("play").textContent = T("start"); };
+$("prev").onclick = () => jumpSentence(-1);
+$("next").onclick = () => jumpSentence(1);
+$("slower").onclick = () => setPace(wpm - 5);
+$("faster").onclick = () => setPace(wpm + 5);
+$("smaller").onclick = () => setSize(size - 4);
+$("bigger").onclick = () => setSize(size + 4);
+$("modeTime").onclick = () => setMode("time");
+$("modeVoice").onclick = () => setMode("voice");
+$("mirror").onclick = () => { mirrored = !mirrored; store.set("mirror", mirrored); $("mirror").setAttribute("aria-pressed", mirrored); };
+
+window.addEventListener("keydown", (e) => {
+  if (e.key === " ") { e.preventDefault(); running ? pause() : play(); }
+  else if (e.key === "ArrowUp" && mode === "time") { e.preventDefault(); setPace(wpm + 5); }
+  else if (e.key === "ArrowDown" && mode === "time") { e.preventDefault(); setPace(wpm - 5); }
+  else if (e.key === "ArrowRight") { e.preventDefault(); jumpSentence(1); }
+  else if (e.key === "ArrowLeft") { e.preventDefault(); jumpSentence(-1); }
+  else if (e.key === "r" || e.key === "R") $("restart").click();
+});
+$("viewport").addEventListener("click", () => (running ? pause() : play()));
+window.addEventListener("resize", measure);
+
+$("wpm").textContent = wpm;
+$("mirror").setAttribute("aria-pressed", mirrored);
+document.documentElement.style.setProperty("--size", (window.innerWidth <= 640 ? Math.min(size, 30) : size) + "px");
+buildTimes();
+measure();
+light(0);
+last = performance.now();
+requestAnimationFrame(frame);
+document.fonts?.ready.then(measure);
+window.__tp = { findMatch, alignTo, words, sentences, norm, get heard() { return heard; } };
+</script>
+</html>

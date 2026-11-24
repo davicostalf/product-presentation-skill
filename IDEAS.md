@@ -18,7 +18,6 @@ Proposals under consideration. Nothing here is a commitment: an approved idea be
 
 ## Script
 
-- **Word budget per segment.** At ~120 words per minute, compute how much fits in each block and check the script against the type's target length. Source: `catalan-adobe/skills` (demo-narrate).
 - **Coverage derived from changes.** When the demo shows a round of changes, list what changed (diff or product changelog) and make sure each item appears in the script. Source: `jaobrown/demo-changes`.
 
 ## Slides

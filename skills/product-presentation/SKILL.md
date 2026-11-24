@@ -3,7 +3,7 @@ name: product-presentation
 description: Plans and produces presentations of a product or prototype, from the script to the final delivery, including narrated demo videos that combine slides, continuous desktop and phone screen video of the live prototype, and a voice-over recorded by the presenter. Use when asked to create, review, or re-cut a product presentation or demo video, write a presentation script, build a storyboard, generate a teleprompter, or treat and sync a recorded narration with prototype screens.
 license: MIT
 metadata:
-  version: "0.4.1"
+  version: "0.5.0"
 ---
 
 # Product presentation
@@ -23,7 +23,7 @@ Each artifact has a single source; the others derive from it.
 | Script | one text file by sections (e.g. `script.json`) | generates the teleprompter, the slide notes and the storyboard lines |
 | Slides | one HTML file per slide, animations declared | blocks that are not prototype |
 | Storyboard | generated from the script + captures | review: one screen per spoken line, with the exact line under it |
-| Teleprompter | generated from the script | recording the narration |
+| Teleprompter | generated from the script (`scripts/teleprompter.py`) | recording the narration |
 | Narration | the presenter's recording, treated and cut | timing base of the video |
 | Project guidelines | a living file with the requester's decisions | reference for every round |
 | Video | assembly of slides, captures and narration | delivery |
@@ -45,7 +45,7 @@ Planning steps (type, script, slides, storyboard) can run anywhere.
 2. Write the **script** in the type's format, following the script rules below.
 3. Prepare **slides** and the **prototype** for each line.
 4. Build the **storyboard** and iterate until approved.
-5. For a recorded delivery, follow [references/recorded-delivery.md](references/recorded-delivery.md): record the narration, treat and cut the audio, capture and assemble, verify, export. Capture the prototype with the scripts in `scripts/` and obey [Prototype capture rules](#prototype-capture-rules).
+5. For a recorded delivery, follow [references/recorded-delivery.md](references/recorded-delivery.md): record the narration (ask for the lossless original), treat and cut the audio, capture and assemble, verify, export. Capture the prototype with the scripts in `scripts/` and obey [Prototype capture rules](#prototype-capture-rules).
 
 Iterate on the storyboard, not on the video: changing text, screens or order there costs minutes. Record the narration only after the storyboard is approved, so a script change never forces a re-recording.
 
@@ -65,7 +65,8 @@ These apply to every type:
 - **No preamble before the content** ("the title says it all:", "it's worth noting that", "the interesting part is").
 - **One action per clause, in sequence**, joined by "and" or "then", never one nested inside another.
 - **What is already on screen comes before what is new.** The sentence starts on the element the viewer just saw and ends on the new information.
-- **Explain every new term the first time it is said.** A word the audience has not heard before, or one used with a specific meaning in this proposal (a new concept, a renamed action, a label invented for the product), gets a one-sentence definition right after it, in plain words, before the video relies on it.
+- **Explain every new term the first time it is said.** A word the audience has not heard before, or one used with a specific meaning in this proposal (a new concept, a renamed action, a label invented for the product), gets a one-sentence definition right after it, in plain words, before the video relies on it. The rule covers what is read as well as what is heard: a product term that cannot be avoided in slide text, a title or a label gets its one-sentence explanation the first time it appears, in the narration or on the slide.
+- **Say what it does, not its technical name**, in everything the audience reads or hears (narration, slide text, title, subtitle, labels). "Finds the cause of a drop" over "root-cause analysis module". A title names the thing and the subtitle says what it is. On-screen titles are self-contained: none depends on its neighbour ("do the same", "for another reason", "also").
 - **No colons in narration.** A colon is a written pause; spoken, it either disappears or sounds like reading. Join with "and", "that", "because", or split into two sentences.
 - **Natural connectors** between ideas, so nothing sounds cut off.
 - **Claim only what the screen shows** and what has been checked. Every action shown is spoken, and everything spoken appears.
@@ -73,6 +74,7 @@ These apply to every type:
 - **Language:** in a non-English video, use the local word when it is common (in Portuguese, "usuário", not "user"; "carrinho", not "cart"). Terms with no usual equivalent stay in the original.
 - **People's names** without an article when the language would add one (Portuguese: "Ana", not "a Ana").
 - **Neutral words for neutral ideas**, and no exaggeration.
+- **Cut to the time budget by tightening, not by removing ideas.** Count the words (about 120 per minute, so a 6-minute video is about 720 spoken words) and compare each block with the type's target length. When it is over, first remove what the screen already shows, then the repetition between consecutive lines, then filler; only after that a whole point.
 - **After recording**, bring back into the script what the presenter improved while speaking.
 - **Chapter titles, captions and on-screen descriptions** describe only what the screen shows, in the domain's words ("technical specifications", not "specs sheet"), and never narrate the pointer ("the cursor moves over…").
 
@@ -84,6 +86,16 @@ These apply to every type:
 - Automatic check: the text of all frames, concatenated, equals the script.
 - Images embedded, in a single file that opens offline.
 
+## Slides
+
+- **Illustrations follow the prototype.** A slide that depicts the interface (a drawing of a card, a menu, a flow) is built from the prototype's real components. Any UI change in the prototype means re-rendering and checking every slide that depicts it; a slide that disagrees with the screen is a visible error.
+- **Same title size across slide types** (covers, content slides, section covers).
+- **Optical centering.** A block centered on a slide sits slightly above the mathematical center.
+- **Soft gradients get a noise layer**, or the video bands them (see [references/recorded-delivery.md](references/recorded-delivery.md), "Animated slides as video").
+- **Small UI drawings use whole pixels.** Half-pixel lines blur.
+- **Contrast on translucent surfaces.** A button or fill on a frosted card needs enough contrast to stay visible (a light gray fill vanishes on frosted white). Floating menus stay solid over translucent cards.
+- **Final resolution.** Render slides at the video's resolution (for 1440p, a 1920 layout at device scale factor 4/3), not at 1080p scaled up.
+
 ## Sync and pacing
 
 These apply to the storyboard and to any recorded or rehearsed delivery.
@@ -92,16 +104,20 @@ These apply to the storyboard and to any recorded or rehearsed delivery.
 - **Between the end of a line and a slide or section change, a 2–3 s pause.** The change never happens mid-sentence.
 - Nothing stays on screen for less than 3 s.
 - **Slide elements:** those not tied to the narration are already on screen when the slide appears; those tied to it enter on the word that names them.
+- **The screen never moves on before the line ends.** A scroll, an opening or a click that leads to the next point starts about 0.3 s after the last word of the current line. If it does not fit, lengthen the gap between the lines; never advance the action into the line.
+- **Multi-step actions follow the words.** Each step lands on the word that names it: the menu opens on "creates a task", the option is clicked on "chooses the initiative". Time the steps from word timestamps inside each line (transcribe each per-line file). A popover stays open until the word that resolves it.
+- **Realistic processing.** An agent or an analysis loads for a believable time (seconds), never instantly. Start it early enough, in the tail of the previous line, that the result is on screen when the narration describes it.
+- **Scroll targets clear sticky headers.** A heading scrolled into view rests below the sticky header and any gradient or fade under it, never beneath.
 - With a field filled in, a short pause before submitting.
 - **Attachments** (photo, document) appear once, centered over both screens blurred and frozen. The prototype acts only after the attachment leaves. The image is the same one shown in the field and in the result.
 - **Pointer:**
   - takes the shape the page would show under it: the hand over a clickable element, the I-beam over a text field, the arrow elsewhere (`cursor.js` reads the element's computed `cursor`);
   - glides, never jumps;
   - to point at something, rests near it, never on top of an element with a hover action;
-  - paths go around such elements;
+  - paths go around such elements, and targets are chosen so that no tooltip or hover preview appears by accident (click the chevron, not the truncated text that shows a tooltip on hover);
   - on the phone, a touch dot;
   - rests fully inside the screen, clear of the edges (pointer radius plus 8 px), the rounded corners and the safe areas.
-- No conspicuous focus ring, tooltip or hover state that is not part of the narration.
+- No conspicuous focus ring, tooltip or hover state that is not part of the narration. A tooltip never shows while a popover is open.
 - **On the phone, touch only.** No hover state ever shows: a tap presses (`:active`), nothing else. `record.mjs --mode phone` strips the prototype's `:hover` rules.
 - **Reading beats.** On a screen dense with information (a product page, a confirmation with suggestions), the pointer passes over each piece the viewer should notice (the price, the delivery, each suggestion) and rests a beat on it, as someone reading would. Scroll the phone far enough to show it.
 - **Desktop and phone mirror each other.** Both make the same choices (the same product, the same answer) and end on the same action; neither does a step the other skips.
@@ -135,10 +151,13 @@ Non-negotiable for every video that shows a prototype. Use the scripts; do not i
 | `scripts/compose.py` | cuts both clips at time zero and composes them on the flat background at 1080p or 1440p |
 | `scripts/scenario-example.mjs` | cue-driven example scenario: open, glide, type, click, wait for load, scroll |
 | `scripts/scenario-slide-example.mjs` | records an animated slide live |
+| `scripts/teleprompter.py` | builds the teleprompter page from the script (`assets/teleprompter.html`): Pace and Voice modes, countdown, mirror |
 | `scripts/transcribe.py` | word timestamps of the narration (faster-whisper) |
+| `scripts/split_lines.py` | splits one continuous narration take into one file per script line and reports tight cuts, deviations and repeats |
 | `scripts/cues.py` | turns word timestamps and named phrases into the cue list that drives a scenario |
 | `scripts/treat_audio.sh` | light voice treatment and loudness normalization |
 | `scripts/cut_audio.py` | cuts at energy minima with short fades; remaps timings |
+| `scripts/render_slide_video.mjs` | renders an animated slide as video, frame by frame on the absolute video clock |
 
 `assets/placeholder-store.html` is a neutral page to try the scripts on before touching the real prototype.
 
@@ -157,7 +176,14 @@ Fix these in the prototype, not in the edit:
 - **Content in the safe area:** a button under the status bar or in a rounded corner, cut by the phone frame. Heed the `SAFE-AREA` warnings.
 - **Decorative frames:** a big box, card, border or drop shadow around the screens, or a device mockup. Flat background only.
 - **Cursor jumping:** teleporting between targets instead of gliding, or no press animation on clicks.
-- **Resting on hover targets:** the pointer parked on an element that reveals actions.
+- **Resting on hover targets:** the pointer parked on an element that reveals actions, or a path that crosses truncated text and raises a tooltip, or a tooltip over an open popover.
+- **Moving before the line ends:** the screen scrolls, opens or clicks into the next point while the current line is still being said.
+- **Steps all on one beat:** a multi-step action done before its words, instead of each step on the word that names it.
+- **Instant loading:** an analysis that appears with no processing time, or that is still loading when the narration describes it.
+- **Heading under the header:** a scroll target that rests beneath the sticky header or its fade.
+- **Stale illustration:** a slide that still shows the interface as it was before a prototype change.
+- **Technical names on screen:** a title or label with the internal name of the thing, or a title that only makes sense next to the previous slide.
+- **Over time:** a script cut by deleting ideas that the screen already carried, instead of tightening the words.
 - **Acting while the attachment preview is up:** the prototype must wait until it leaves.
 - **Words before the screen:** the sentence names something that is not visible yet.
 - **Arrow over a button:** the desktop pointer never turning into the hand over clickable elements.
