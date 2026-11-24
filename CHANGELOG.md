@@ -2,6 +2,28 @@
 
 Notable changes to the skill. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] - 2026-11-24
+
+### Added
+
+- `scripts/teleprompter.py` and `assets/teleprompter.html`: the teleprompter page, built from the script (project shape or a plain list of `{head, lines}`). Pace and Voice modes; voice following matches the last ~6 recognized words against a forward window, widens it after ~4 s without a match, restarts recognition on end and after ~8 s of silence, retries on network errors and explains mic and network problems; countdown, wake lock, size, mirror, section pause. `--lang` sets the interface labels and the recognition language, `--ui` overrides labels.
+- `scripts/split_lines.py`: splits one continuous narration take into one file per script line, cutting each boundary at the centre of the longest silence, and reports tight boundaries, deviations from the script and repeated words (it never edits the take).
+- `scripts/render_slide_video.mjs`: renders an animated slide as video with deterministic frame capture on the absolute video clock, low-rate capture of slow motion, 30 fps output.
+- Rules in SKILL.md: the screen never moves on before the line ends; multi-step actions land on the words that name each step; realistic processing time; scroll targets clear sticky headers and their fades; the pointer path avoids hover reveals and no tooltip shows over a popover; slide illustrations follow the prototype; a "Slides" section with finish rules (one title size, optical centering, noise over soft gradients, whole pixels, contrast on translucent surfaces, solid floating menus); say what it does, not its technical name, in everything read or heard, with new terms explained on screen too; cut to the time budget by tightening, not by removing ideas.
+- `references/recorded-delivery.md`: sections "Teleprompter" (script shape, serving over `http://localhost` in Chrome or Edge), "One take, many lines" and "Animated slides as video"; asking for the lossless original recording (float originals recover peaks above 0 dBFS; check whether two takes are the same take by cross-correlation).
+- Common mistakes for each new rule.
+
+### Changed
+
+- Final export is one recommendation, x264 `--preset slow --crf 16` (it was `--crf 17 --preset medium`), also used by the slide clips; `compose.py` documents it.
+- Final resolution end to end: for 1440p, slides render at 1440p (device scale factor 4/3 for a 1920 layout) and the prototype is captured at 2x and downscaled with lanczos.
+- The rule "Explain every new term" now covers on-screen text, and the rule on resting on hover targets covers paths and tooltips.
+- The teleprompter bullet in the recorded-delivery reference moved into its own section.
+
+### Removed
+
+- "Word budget per segment" from IDEAS.md (implemented as a script rule).
+
 ## [0.4.1] - 2026-11-12
 
 ### Added

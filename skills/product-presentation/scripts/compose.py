@@ -36,7 +36,7 @@ Options:
   --start S              start S seconds after scenario time 0 (default 0)
   --duration S           length in seconds (default: as long as both clips allow)
   --no-marker            clips have no red marker: start both at 0
-  --crf N / --preset P   x264 settings (default 14 / veryfast; use 17+ medium for the final export)
+  --crf N / --preset P   x264 settings (default 14 / veryfast for reviews; the final export is --crf 16 --preset slow)
   --still T OUT.png      write the composite frame at time T (seconds) to OUT.png
 
 Dependencies: Python 3.9+, Pillow (pip install pillow), ffmpeg + ffprobe.
