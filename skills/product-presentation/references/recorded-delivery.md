@@ -45,7 +45,7 @@ How to turn an approved storyboard into a narrated video.
 When the presenter recorded the whole script in one continuous take, `scripts/split_lines.py narration.wav words.json script.json outdir/` cuts it into one file per script line (`00.wav`, `01.wav`, ...). Treat and cut the take first (`treat_audio.sh`, `cut_audio.py`), transcribe the result (`transcribe.py`), then split.
 
 - It aligns the transcript to the script lines (difflib on normalized words) and cuts each boundary at the centre of the longest silence between the last word of line N and the first of line N+1, with 8 ms fades. It writes `boundaries.json` (cut times, line ranges) and `report.json` too.
-- **It reports, it does not edit.** Read the report: *tight* boundaries (under 0.4 s of silence: listen to both sides), *deviations* (script words not said, words said that are not in the script; numbers often differ between written and spoken form), and *repeats* (repeated words or phrases with timestamps: false starts to cut by hand with `cut_audio.py`, or to re-record).
+- **It reports, it does not edit.** Read the report: *tight* boundaries (under 0.4 s of silence: listen to both sides), *deviations* (script words not said, words said that are not in the script; numbers often differ between written and spoken form), *repeats* (repeated words or phrases with timestamps: false starts to cut by hand with `cut_audio.py`, or to re-record), *restarts* (a phrase said again with small changes within 8 s, such as "that looks in" then "that appears in", which the exact-repeat check misses) and *long silences* (a pause over 1.5 s between two words of the same line). `python3 scripts/split_lines.py --self-test` checks the detectors on synthetic word lists.
 - Words the presenter improved while speaking show up as deviations; bring them back into the script (see SKILL.md) and re-run, so the script and the lines agree.
 - Transcribe each per-line file again when a scenario needs word times inside a line (see "Multi-step actions follow the words" in SKILL.md).
 
@@ -106,6 +106,7 @@ Slides with a slowly moving background (soft gradient blobs drifting with CSS `@
 - One frame per spoken line, on contact sheets, checked against the storyboard before delivery.
 - Check that the video moves: frames from different seconds of a prototype segment must differ (pointer in a new place, text typed, page changed). A segment where frames repeat is a slideshow.
 - Probes in the page during capture (e.g. log every 50 ms whether any hover button is visible), to prove what the eye cannot see in thumbnails.
+- Before handing off, go through [review-checklist.md](review-checklist.md) with the full video at 1x and a frame every second.
 - Look at the contact sheet of every clip before delivering it, never only at a sample, and check on it: the hand over clickable elements on desktop, no hover on the phone, no prototype tools on screen, both sides making the same choices and ending on the same action.
 - Sensitive points:
   - screen loaded before the narration mentions it;

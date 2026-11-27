@@ -34,12 +34,23 @@ Report (also printed)
               and the spoken form; read the list before assuming a problem
   REPEAT      repeated words or phrases within 1.5 s (false starts, "the the", a restarted phrase), with
               timestamps, so the take can be cut by hand with cut_audio.py or re-recorded
+  RESTART     a phrase said again with small changes within --restart-window seconds (default 8): a false start
+              the exact-repeat check misses because the words differ slightly ("that looks in" ... "that appears
+              in"). Word n-grams of 3 to 5 are compared on normalized words with difflib (--restart-sim,
+              default 0.85); each hit gives both occurrences with timestamps
+  LONG SILENCE  a pause longer than --silence seconds (default 1.5) between two words of the same line
+              (pauses at a line boundary are not listed), with timestamps: a hesitation, a lost thread, a
+              re-take left in the middle of the line
 
 Options
   --tight S     silence length under which a boundary is flagged (default 0.4)
   --trim PAD    keep PAD seconds of silence before the first word and after the last one (default: keep the
                 file as is, from its start to its end)
   --fade S      fade length (default 0.008)
+  --restart-window S  time from the end of the first occurrence to the start of the second (default 8)
+  --restart-sim R     minimum similarity, 0 to 1, of two n-grams to count as a restart (default 0.85)
+  --silence S   silence inside a line above which it is listed (default 1.5)
+  --self-test   run the checks on synthetic word lists and exit (no other arguments needed)
   --report-only print the report and the cut times without writing audio
 
 Usage
@@ -176,7 +187,87 @@ def repeats(words, window=1.5):
     return out
 
 
+def restarts(words, window=8.0, sim=0.85, sizes=(5, 4, 3)):
+    """Near-duplicate word n-grams (n = 3..5) whose second occurrence starts within `window` seconds of the
+    end of the first: a phrase restarted with small changes. Longest, most similar hits win; hits never overlap."""
+    toks = [norm(w["word"]) for w in words]
+    n = len(words)
+    cands = []
+    for size in sizes:
+        for i in range(n - size + 1):
+            a = toks[i:i + size]
+            if not all(a):
+                continue
+            ja = "".join(a)
+            if len(ja) < 8:  # too short to mean anything ("de a o")
+                continue
+            for j in range(i + size, n - size + 1):  # no overlap with the first occurrence
+                if words[j]["start"] - words[i + size - 1]["end"] > window:
+                    break
+                b = toks[j:j + size]
+                if not all(b):
+                    continue
+                score = difflib.SequenceMatcher(None, ja, "".join(b)).ratio()
+                if score >= sim:
+                    cands.append((size, score, i, j))
+    cands.sort(key=lambda c: (-c[0], -c[1], c[2]))
+    used, out = set(), []
+    for size, score, i, j in cands:
+        span = set(range(i, i + size)) | set(range(j, j + size))
+        if span & used:
+            continue
+        used |= span
+        out.append({"first_at": round(words[i]["start"], 2), "second_at": round(words[j]["start"], 2),
+                    "similarity": round(score, 2),
+                    "first": " ".join(w["word"] for w in words[i:i + size]),
+                    "second": " ".join(w["word"] for w in words[j:j + size])})
+    return sorted(out, key=lambda r: r["first_at"])
+
+
+def long_silences(words, cuts, limit=1.5):
+    """Gaps longer than `limit` seconds between consecutive words that are not a line boundary (a cut falls in
+    a boundary gap)."""
+    out = []
+    for k in range(len(words) - 1):
+        a, b = words[k]["end"], words[k + 1]["start"]
+        if b - a > limit and not any(a - 0.2 <= c <= b + 0.2 for c in cuts):
+            out.append({"from": round(a, 2), "to": round(b, 2), "length": round(b - a, 2),
+                        "between": "%s | %s" % (words[k]["word"], words[k + 1]["word"])})
+    return out
+
+
+def self_test():
+    def mk(spec):
+        return [{"word": w, "start": s, "end": e} for w, s, e in spec]
+
+    # the false start from a real take: "...que parece em" then, after a pause, "...que aparece em destaque"
+    spec, t = [], 10.0
+    for w in "Sobra o laminado escuro que parece em".split():
+        spec.append((w, t, t + 0.3))
+        t += 0.35
+    t += 6.5  # the silence inside the line
+    for w in "que aparece em destaque no resultado".split():
+        spec.append((w, t, t + 0.3))
+        t += 0.35
+    words = mk(spec)
+    assert len(repeats(words)) == 0, "exact-repeat check should miss it"
+    r = restarts(words)  # default window: 6.5 s of silence plus a few words still counts
+    assert len(r) == 1 and r[0]["first"] == "que parece em" and r[0]["second"] == "que aparece em", r
+    assert len(restarts(words, window=1)) == 0, "outside the window"
+    ls = long_silences(words, cuts=[])
+    assert len(ls) == 1 and abs(ls[0]["length"] - 6.5) < 0.2, ls
+    assert long_silences(words, cuts=[spec[6][2] + 3.0]) == [], "a pause at a line boundary is not internal"
+    # a clean read has neither
+    clean = mk([(w, 0.4 * i, 0.4 * i + 0.3) for i, w in
+                enumerate("the filter keeps only products that match every option you choose".split())])
+    assert restarts(clean) == [] and long_silences(clean, []) == []
+    print("self-test ok")
+
+
 def main():
+    if "--self-test" in sys.argv:
+        self_test()
+        return
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("narration")
     ap.add_argument("words")
@@ -185,6 +276,9 @@ def main():
     ap.add_argument("--tight", type=float, default=0.4)
     ap.add_argument("--trim", type=float, default=None)
     ap.add_argument("--fade", type=float, default=0.008)
+    ap.add_argument("--restart-window", type=float, default=8.0)
+    ap.add_argument("--restart-sim", type=float, default=0.85)
+    ap.add_argument("--silence", type=float, default=1.5)
     ap.add_argument("--report-only", action="store_true")
     a = ap.parse_args()
     if not shutil.which("ffmpeg"):
@@ -229,7 +323,10 @@ def main():
                     {"word": w["word"], "at": round(w["start"], 2)})
     deviations = [{"line": l, "missing": d["missing"], "inserted": d["inserted"]} for l, d in sorted(dev.items())]
     rep = repeats(words)
-    report = {"lines": len(lines), "tight": tight, "deviations": deviations, "repeats": rep}
+    rst = restarts(words, a.restart_window, a.restart_sim)
+    sil = long_silences(words, cuts, a.silence)
+    report = {"lines": len(lines), "tight": tight, "deviations": deviations, "repeats": rep,
+              "restarts": rst, "long_silences": sil}
 
     os.makedirs(a.outdir, exist_ok=True)
     info = [{"line": n, "start": round(bounds[n], 3), "end": round(bounds[n + 1], 3), "text": lines[n]}
@@ -262,6 +359,13 @@ def main():
     print("\nREPEATS (possible false starts): %d" % len(rep))
     for r in rep:
         print("  %.2f-%.2f s  %s" % (r["at"], r["until"], r["text"]))
+    print("\nRESTART (a phrase said again with small changes within %.0f s): %d" % (a.restart_window, len(rst)))
+    for r in rst:
+        print("  %.2f s \"%s\"  ->  %.2f s \"%s\"  (similarity %.2f)" % (
+            r["first_at"], r["first"], r["second_at"], r["second"], r["similarity"]))
+    print("\nLONG SILENCE inside a line (> %.1f s): %d" % (a.silence, len(sil)))
+    for s_ in sil:
+        print("  %.2f-%.2f s  %.1f s  (%s)" % (s_["from"], s_["to"], s_["length"], s_["between"]))
 
 
 if __name__ == "__main__":

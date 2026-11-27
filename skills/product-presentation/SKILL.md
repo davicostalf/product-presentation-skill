@@ -3,7 +3,7 @@ name: product-presentation
 description: Plans and produces presentations of a product or prototype, from the script to the final delivery, including narrated demo videos that combine slides, continuous desktop and phone screen video of the live prototype, and a voice-over recorded by the presenter. Use when asked to create, review, or re-cut a product presentation or demo video, write a presentation script, build a storyboard, generate a teleprompter, or treat and sync a recorded narration with prototype screens.
 license: MIT
 metadata:
-  version: "0.5.0"
+  version: "0.6.0"
 ---
 
 # Product presentation
@@ -88,7 +88,11 @@ These apply to every type:
 
 ## Slides
 
-- **Illustrations follow the prototype.** A slide that depicts the interface (a drawing of a card, a menu, a flow) is built from the prototype's real components. Any UI change in the prototype means re-rendering and checking every slide that depicts it; a slide that disagrees with the screen is a visible error.
+- **Illustrations come from the prototype.** Slide illustrations of the product are built from the prototype's real components or CSS, or from screenshots of it, never redrawn from memory (a circle around an icon that has none, a button centered where the prototype bottom-aligns it). Before rendering, put each illustration side by side with the prototype at the same scale and compare. Any UI change in the prototype means re-rendering and checking every slide that depicts it; a slide that disagrees with the screen is a visible error.
+- **Contrast for data marks.** Data marks and meaningful shapes (bars, lines, icons, chart segments, scale steps) meet at least 3:1 against the surface they sit on (WCAG 1.4.11, non-text contrast). Check the light end of a scale in a frame of the rendered video, not only in the source: gradients, noise and compression change what the viewer sees. `scripts/check_contrast.py frame.png --mark X,Y --surface X,Y` prints the ratio and fails below 3:1; `--colors A B` compares two colors.
+- **One pointer vocabulary.** The whole video uses one pointer: a slide that shows a tap or a click draws the same `cursor.js` arrow and touch dot as the captures, not a different cursor.
+- **No single-word last lines.** No line of slide text ends with a single word. Use `text-wrap: pretty` for body text and `text-wrap: balance` for titles, and check every build state of the slide, since a line added later can leave a stray word.
+- **Short entrances.** A slide's illustration enters complete within about 1 s. Build steps exist only for a change that is the point of the slide, and come after a short natural beat, never held back for a distant word in the narration.
 - **Same title size across slide types** (covers, content slides, section covers).
 - **Optical centering.** A block centered on a slide sits slightly above the mathematical center.
 - **Soft gradients get a noise layer**, or the video bands them (see [references/recorded-delivery.md](references/recorded-delivery.md), "Animated slides as video").
@@ -103,13 +107,14 @@ These apply to the storyboard and to any recorded or rehearsed delivery.
 - **The screen shows the thing 0.3–0.8 s before the words name it.** Never during, never after, never while the page is still loading.
 - **Between the end of a line and a slide or section change, a 2–3 s pause.** The change never happens mid-sentence.
 - Nothing stays on screen for less than 3 s.
-- **Slide elements:** those not tied to the narration are already on screen when the slide appears; those tied to it enter on the word that names them.
+- **Slide elements:** the illustration is on screen, complete, within about 1 s of the slide appearing (see "Short entrances" in Slides); only a build step that is the point of the slide waits, and then for a short beat, not for a distant word.
 - **The screen never moves on before the line ends.** A scroll, an opening or a click that leads to the next point starts about 0.3 s after the last word of the current line. If it does not fit, lengthen the gap between the lines; never advance the action into the line.
 - **Multi-step actions follow the words.** Each step lands on the word that names it: the menu opens on "creates a task", the option is clicked on "chooses the initiative". Time the steps from word timestamps inside each line (transcribe each per-line file). A popover stays open until the word that resolves it.
 - **Realistic processing.** An agent or an analysis loads for a believable time (seconds), never instantly. Start it early enough, in the tail of the previous line, that the result is on screen when the narration describes it.
 - **Scroll targets clear sticky headers.** A heading scrolled into view rests below the sticky header and any gradient or fade under it, never beneath.
 - With a field filled in, a short pause before submitting.
-- **Attachments** (photo, document) appear once, centered over both screens blurred and frozen. The prototype acts only after the attachment leaves. The image is the same one shown in the field and in the result.
+- **Attachments** (photo, document) appear once, centered over both screens blurred and frozen. The image is the same one shown in the field and in the result.
+- **Frozen under overlays.** While an overlay or preview covers the screen, the screens behind it are frozen. No action happens underneath: actions wait until it lifts, or happen before it appears.
 - **Pointer:**
   - takes the shape the page would show under it: the hand over a clickable element, the I-beam over a text field, the arrow elsewhere (`cursor.js` reads the element's computed `cursor`);
   - glides, never jumps;
@@ -153,7 +158,8 @@ Non-negotiable for every video that shows a prototype. Use the scripts; do not i
 | `scripts/scenario-slide-example.mjs` | records an animated slide live |
 | `scripts/teleprompter.py` | builds the teleprompter page from the script (`assets/teleprompter.html`): Pace and Voice modes, countdown, mirror |
 | `scripts/transcribe.py` | word timestamps of the narration (faster-whisper) |
-| `scripts/split_lines.py` | splits one continuous narration take into one file per script line and reports tight cuts, deviations and repeats |
+| `scripts/split_lines.py` | splits one continuous narration take into one file per script line and reports tight cuts, deviations, repeats, restarts and long silences inside a line |
+| `scripts/check_contrast.py` | contrast ratio between two colors or two points of a rendered frame; fails below 3:1 |
 | `scripts/cues.py` | turns word timestamps and named phrases into the cue list that drives a scenario |
 | `scripts/treat_audio.sh` | light voice treatment and loudness normalization |
 | `scripts/cut_audio.py` | cuts at energy minima with short fades; remaps timings |
@@ -190,8 +196,19 @@ Fix these in the prototype, not in the edit:
 - **Hover on the phone:** a hover highlight or a hovering pointer on a touch screen.
 - **Tools on screen:** the prototype's state panel or debug button recorded with the product.
 - **Skimming dense screens:** the pointer rushing past prices and details instead of reading them.
+- **Illegible data marks:** a bar, line or scale step that disappears into the slide background (under 3:1), especially the light end of a scale.
+- **Redrawn illustrations:** a slide drawing of the product that differs from the prototype in a detail (an extra circle, a centered button).
+- **Two pointers:** a slide that shows a tap or click with a different cursor from the captures.
+- **Actions under an overlay:** the prototype changing behind an attachment preview or other overlay.
+- **Single-word last lines:** a line of slide text that ends with one word, in any build state.
+- **Held-back illustrations:** a slide illustration built piece by piece to wait for distant words, instead of entering complete within about 1 s.
+- **Narration left rough:** a false start, a restart with slightly different words or a long silence inside a line, left in the video because only a contact sheet of line starts was reviewed. Run `split_lines.py` and watch the video at 1x.
 - **Mismatched sides:** desktop picks one thing and the phone another, or one side does an extra step.
 - **Silent fallback:** capture tooling missing and the video built from stills anyway. Stop and report instead.
+
+## Watch before handing off
+
+Before handing off, review the full video at 1x, with sound, from start to end, and again as a frame every second (a contact sheet of line starts misses what happens between them). Work through the checklist in [references/review-checklist.md](references/review-checklist.md): contrast, fidelity to the prototype, pointer and touch, overlays, text wrapping, sync, phone and desktop, narration and loudness. Fix at the root (the slide, the prototype, the take), then review again.
 
 ## Working mode
 

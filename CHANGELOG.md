@@ -2,6 +2,24 @@
 
 Notable changes to the skill. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.6.0] - 2026-11-27
+
+From a narrated video whose problems showed only when watching the final result: a gray data bar lost against the background, slide drawings that drifted from the prototype, a different cursor on a slide, actions under an attachment preview, a narration false start left in, illustrations held back for distant words, and single-word last lines.
+
+### Added
+
+- `references/review-checklist.md`: the final-pass checklist (contrast, fidelity to the prototype, pointer and touch, overlays, text wrapping, sync, phone and desktop, narration, loudness), linked from SKILL.md and from the verification section of `recorded-delivery.md`.
+- `scripts/check_contrast.py`: contrast ratio between two colors or two points of a rendered frame; flags anything under 3:1 (`--min` for text) and exits 1, so it can gate a script. Has `--self-test`.
+- `scripts/split_lines.py`: RESTART detection (near-duplicate word n-grams of 3 to 5, compared with difflib on normalized words, second occurrence within 8 s of the first, so "que parece em" then "que aparece em" is found) and LONG SILENCE detection (over 1.5 s between two words of the same line). Both are in `report.json` and the printed report with timestamps; the take is still never edited. Options `--restart-window`, `--restart-sim`, `--silence`, and `--self-test` with synthetic word lists.
+- Rules in SKILL.md: contrast for data marks (3:1, checked on the rendered frame), illustrations from the prototype and compared side by side, one pointer vocabulary, frozen under overlays, no single-word last lines, short entrances, and a "Watch before handing off" section.
+- Common mistakes for each new rule.
+
+### Changed
+
+- "Slide elements" in Sync and pacing: the illustration is complete within about 1 s; it used to say elements tied to the narration enter on the word that names them.
+- "Illustrations follow the prototype" in Slides is now "Illustrations come from the prototype" and covers drawings made from memory.
+- The attachment rule now states the general one: screens behind any overlay are frozen.
+
 ## [0.5.0] - 2026-11-24
 
 ### Added

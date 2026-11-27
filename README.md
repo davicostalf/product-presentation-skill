@@ -11,7 +11,8 @@ skills/product-presentation/
 ├── SKILL.md                         # workflow, script rules, slides, storyboard, sync, capture rules, common mistakes
 ├── references/
 │   ├── presentation-types.md        # sequences and rules per presentation type
-│   └── recorded-delivery.md         # narration, teleprompter, audio, one take to lines, capture, animated slides, assembly, verification
+│   ├── recorded-delivery.md         # narration, teleprompter, audio, one take to lines, capture, animated slides, assembly, verification
+│   └── review-checklist.md          # final pass: contrast, fidelity, pointer, overlays, wrapping, sync, narration, loudness
 ├── scripts/
 │   ├── check_env.sh                 # is real capture possible here?
 │   ├── cursor.js                    # injected pointer (arrow / touch dot) + glide, click, type, scroll
@@ -22,7 +23,8 @@ skills/product-presentation/
 │   ├── scenario-slide-example.mjs   # live slide recording
 │   ├── teleprompter.py              # script -> teleprompter page (Pace and Voice modes)
 │   ├── transcribe.py                # word timestamps
-│   ├── split_lines.py               # one continuous take -> one file per script line, with a report
+│   ├── split_lines.py               # one continuous take -> one file per script line, with a report (tight, deviations, repeats, restarts, long silences)
+│   ├── check_contrast.py            # contrast ratio of two colors or two points of a rendered frame (3:1 for data marks)
 │   ├── cues.py                      # phrases -> cue list
 │   ├── treat_audio.sh               # light voice treatment
 │   ├── cut_audio.py                 # cuts at energy minima
